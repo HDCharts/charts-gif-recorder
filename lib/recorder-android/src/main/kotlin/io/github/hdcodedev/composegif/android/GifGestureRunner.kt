@@ -23,7 +23,8 @@ internal fun runGifGestureSteps(
             if (gifFramesRemaining(totalFrames, nextFrameIndex) <= 0) break
             when (step.type) {
                 GifGestureType.PAUSE -> {
-                    val framesToCapture = min(step.frames.coerceAtLeast(0), gifFramesRemaining(totalFrames, nextFrameIndex))
+                    val framesToCapture =
+                        min(step.frames.coerceAtLeast(0), gifFramesRemaining(totalFrames, nextFrameIndex))
                     nextFrameIndex = captureFrames(framesToCapture, nextFrameIndex)
                 }
                 GifGestureType.TAP -> {
@@ -32,7 +33,8 @@ internal fun runGifGestureSteps(
                         click(target)
                     }
                     waitForIdle()
-                    val framesToCapture = min(step.framesAfter.coerceAtLeast(0), gifFramesRemaining(totalFrames, nextFrameIndex))
+                    val framesToCapture =
+                        min(step.framesAfter.coerceAtLeast(0), gifFramesRemaining(totalFrames, nextFrameIndex))
                     nextFrameIndex = captureFrames(framesToCapture, nextFrameIndex)
                 }
                 GifGestureType.DRAG_PATH -> {
@@ -47,7 +49,8 @@ internal fun runGifGestureSteps(
                     pointerActive = true
                     waitForIdle()
 
-                    val holdFrames = min(step.holdStartFrames.coerceAtLeast(0), gifFramesRemaining(totalFrames, nextFrameIndex))
+                    val holdFrames =
+                        min(step.holdStartFrames.coerceAtLeast(0), gifFramesRemaining(totalFrames, nextFrameIndex))
                     nextFrameIndex = captureFrames(holdFrames, nextFrameIndex)
 
                     var previousOffset = startOffset
@@ -79,7 +82,8 @@ internal fun runGifGestureSteps(
                     pointerActive = false
                     waitForIdle()
 
-                    val releaseFrames = min(step.releaseFrames.coerceAtLeast(0), gifFramesRemaining(totalFrames, nextFrameIndex))
+                    val releaseFrames =
+                        min(step.releaseFrames.coerceAtLeast(0), gifFramesRemaining(totalFrames, nextFrameIndex))
                     nextFrameIndex = captureFrames(releaseFrames, nextFrameIndex)
                 }
             }
