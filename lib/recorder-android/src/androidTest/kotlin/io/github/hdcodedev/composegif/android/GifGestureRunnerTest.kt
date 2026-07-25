@@ -43,8 +43,7 @@ class GifGestureRunnerTest {
                             detectTapGestures(
                                 onTap = { tapCount.intValue += 1 },
                             )
-                        }
-                        .pointerInput(Unit) {
+                        }.pointerInput(Unit) {
                             detectDragGestures(
                                 onDrag = { _, _ -> dragEventCount.intValue += 1 },
                             )
