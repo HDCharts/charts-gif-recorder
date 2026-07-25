@@ -1,5 +1,8 @@
+# Workflow: build Dokka API docs and deploy them to GitHub Pages.
+# It runs on main branch pushes that touch lib or this workflow file.
+#
+# This publishes the public API docs site.
 name: Deploy API Docs
-
 on:
   workflow_dispatch:
   push:

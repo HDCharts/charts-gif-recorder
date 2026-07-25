@@ -48,7 +48,8 @@ public class GifFrameCaptureTest {
         GifCaptureValidator.validate(scenario)
 
         val frameStepMs = max(1L, 1000L / scenario.capture.fps.toLong())
-        val frameCount = max(1, ((scenario.capture.durationMs.toLong() * scenario.capture.fps.toLong()) / 1000L).toInt())
+        val frameCount =
+            max(1, ((scenario.capture.durationMs.toLong() * scenario.capture.fps.toLong()) / 1000L).toInt())
 
         val outputDir = prepareOutputDirectory(outputSubdir, scenario.name)
 
@@ -127,7 +128,10 @@ public class GifFrameCaptureTest {
             ?: error("Scenario '$name' not found. Available: ${scenarios.map { it.name }.sorted()}")
     }
 
-    private fun prepareOutputDirectory(outputSubdir: String, scenarioName: String): File {
+    private fun prepareOutputDirectory(
+        outputSubdir: String,
+        scenarioName: String,
+    ): File {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
         val outputDir = File(baseDir, "$outputSubdir/$scenarioName")

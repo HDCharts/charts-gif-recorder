@@ -1,5 +1,8 @@
+# Workflow: run lint checks for the gif recorder project.
+# It skips work when only docs-only changes are detected.
+#
+# This is the main lint gate for the repo.
 name: Lint
-
 on:
   pull_request:
     types: [opened, synchronize, reopened]

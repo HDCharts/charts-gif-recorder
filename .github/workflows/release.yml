@@ -1,5 +1,8 @@
+# Workflow: publish a release for the gif recorder project.
+# It validates versioning and release prerequisites before publishing.
+#
+# This is the manual release path.
 name: Release
-
 on:
   workflow_dispatch:
 

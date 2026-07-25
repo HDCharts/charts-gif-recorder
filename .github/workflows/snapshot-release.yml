@@ -1,5 +1,8 @@
+# Workflow: publish a snapshot release when recent changes justify it.
+# It can also be triggered manually.
+#
+# This is the automated pre-release path for the repo.
 name: Snapshot Release
-
 on:
   workflow_dispatch:
   schedule:

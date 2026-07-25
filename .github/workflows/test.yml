@@ -1,5 +1,8 @@
+# Workflow: run the gif recorder test suite on pull requests.
+# It uploads a test summary artifact for downstream comment workflows.
+#
+# This is the main automated test gate.
 name: Test
-
 on:
   pull_request:
     types: [opened, synchronize, reopened]
