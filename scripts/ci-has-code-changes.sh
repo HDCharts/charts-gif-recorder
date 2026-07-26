@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CODE_PATH_PATTERN='^(app/|lib/|demo-app/|gradle/|scripts/|build\.gradle\.kts$|settings\.gradle\.kts$|gradle\.properties$|gradlew$|gradlew\.bat$|\.editorconfig$|\.github/workflows/)'
-
 is_code_change() {
   local changed_files="$1"
+  local changed_file
 
-  if grep -Eq "$CODE_PATH_PATTERN" <<<"$changed_files"; then
-    echo "true"
-  else
-    echo "false"
-  fi
+  while IFS= read -r changed_file; do
+    [[ -n "$changed_file" ]] || continue
+    case "$changed_file" in
+      docs/*|release-notes/*|*.md|LICENSE|LICENSE.*) ;;
+      *)
+        echo "true"
+        return
+        ;;
+    esac
+  done <<<"$changed_files"
+
+  echo "false"
 }
 
 collect_changed_files() {
@@ -61,8 +67,13 @@ run_self_test() {
     failures=$((failures + 1))
   fi
 
+  result="$(is_code_change ".github/actions/example/action.yml")"
+  if ! assert_equal "true" "$result" "local action change"; then
+    failures=$((failures + 1))
+  fi
+
   result="$(is_code_change "libs/src/Main.kt")"
-  if ! assert_equal "false" "$result" "prefix boundary"; then
+  if ! assert_equal "true" "$result" "new source directory"; then
     failures=$((failures + 1))
   fi
 
