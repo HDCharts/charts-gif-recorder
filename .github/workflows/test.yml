@@ -45,36 +45,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Test
-        id: gradle_tests
         run: |
           set -euo pipefail
           ./gradlew appTest
           cd lib
           ./gradlew recorderTest
-      - name: Test summary
-        if: always()
-        env:
-          CI_GRADLE_TEST_OUTCOME: ${{ steps.gradle_tests.outcome }}
-          CI_JOB_STATUS: ${{ job.status }}
-          CI_SHOULD_RUN: ${{ inputs.should-run }}
-        run: bash scripts/ci-test-summary.sh
-      - name: Ensure summary files exist
-        if: always()
-        run: |
-          if [ ! -f ci-test-summary.md ] || [ ! -f ci-test-summary.json ]; then
-            CI_TEST_SUMMARY_FORCE_ZERO=true \
-            CI_TEST_SUMMARY_SKIP_STEP_SUMMARY=true \
-            CI_GRADLE_TEST_OUTCOME="${{ steps.gradle_tests.outcome }}" \
-            CI_JOB_STATUS="${{ job.status }}" \
-            CI_SHOULD_RUN="${{ inputs.should-run }}" \
-            bash scripts/ci-test-summary.sh
-          fi
-      - name: Upload test summary artifact
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Upload Gradle test reports
+        if: ${{ always() && inputs.should-run }}
+        uses: actions/upload-artifact@v7
         with:
-          name: ci-test-summary
-          if-no-files-found: error
+          name: gradle-test-reports
+          if-no-files-found: warn
           path: |
-            ci-test-summary.md
-            ci-test-summary.json
+            **/build/reports/tests/**
+            **/build/test-results/**
