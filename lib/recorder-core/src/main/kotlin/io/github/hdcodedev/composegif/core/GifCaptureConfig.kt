@@ -1,13 +1,13 @@
 package io.github.hdcodedev.composegif.core
 
 /** Available visual themes for GIF capture scenarios. */
-public enum class GifTheme {
+enum class GifTheme {
     LIGHT,
     DARK,
 }
 
 /** Gesture primitives used during deterministic replay. */
-public enum class GifGestureType {
+enum class GifGestureType {
     PAUSE,
     TAP,
     DRAG_PATH,
@@ -19,7 +19,7 @@ public enum class GifGestureType {
  * @property x Horizontal fraction in range `[0.0, 1.0]`.
  * @property y Vertical fraction in range `[0.0, 1.0]`.
  */
-public data class GifFractionPoint(
+data class GifFractionPoint(
     val x: Float,
     val y: Float,
 )
@@ -37,7 +37,7 @@ public data class GifFractionPoint(
  * @property framesPerWaypoint Interpolation frames between drag waypoints.
  * @property releaseFrames Pause frames after pointer up for `DRAG_PATH`.
  */
-public data class GifGestureStep(
+data class GifGestureStep(
     val type: GifGestureType = GifGestureType.PAUSE,
     val frames: Int = 0,
     val xFraction: Float = 0.5f,
@@ -60,7 +60,7 @@ public data class GifGestureStep(
  * @property interactionNodeTag Node tag used as the gesture target root.
  * @property gestures Low-level gesture steps replayed during capture.
  */
-public data class GifCaptureConfig(
+data class GifCaptureConfig(
     val durationMs: Int = 3000,
     val fps: Int = 50,
     val widthPx: Int = 540,
@@ -76,24 +76,24 @@ public data class GifCaptureConfig(
  * @property name Scenario identifier used by generated registries and tooling.
  * @property capture Capture configuration for this scenario.
  */
-public data class GifScenarioSpec(
+data class GifScenarioSpec(
     val name: String,
     val capture: GifCaptureConfig,
 )
 
 /** Thrown when a scenario name or capture configuration fails validation. */
-public class GifValidationException(
+class GifValidationException(
     message: String,
 ) : IllegalArgumentException(message)
 
 /** Validation helpers for scenario specs and capture configs. */
-public object GifCaptureValidator {
+object GifCaptureValidator {
     /**
      * Validates a complete scenario specification.
      *
      * @throws GifValidationException if the spec is invalid.
      */
-    public fun validate(spec: GifScenarioSpec) {
+    fun validate(spec: GifScenarioSpec) {
         requireName(spec.name)
         validate(spec.capture)
     }
@@ -103,7 +103,7 @@ public object GifCaptureValidator {
      *
      * @throws GifValidationException if the config is invalid.
      */
-    public fun validate(config: GifCaptureConfig) {
+    fun validate(config: GifCaptureConfig) {
         if (config.durationMs <= 0) {
             throw GifValidationException("durationMs must be greater than 0.")
         }
@@ -129,7 +129,7 @@ public object GifCaptureValidator {
      *
      * @throws GifValidationException if the name is blank or has unsupported characters.
      */
-    public fun requireName(name: String) {
+    fun requireName(name: String) {
         if (name.isBlank()) {
             throw GifValidationException("Scenario name cannot be blank.")
         }

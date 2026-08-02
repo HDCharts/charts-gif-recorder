@@ -6,3 +6,5 @@ local.properties
 *.iml
 .DS_Store
 lib/.kotlin
+# Generated GIFs; committed reference files live in gif-baselines/.
+app/artifacts/gifs/*.gif

@@ -1,0 +1,63 @@
+# Coordinates every pull request check from one immutable revision.
+name: Pull Request
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    name: Prepare PR
+    runs-on: ubuntu-latest
+    outputs:
+      source_sha: ${{ github.sha }}
+      should_run: ${{ steps.changes.outputs.should_run }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Detect code changes
+        id: changes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          should_run="$(bash scripts/ci-has-code-changes.sh "$BASE_SHA" "$HEAD_SHA")"
+          echo "should_run=$should_run" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: PR Test
+    needs: prepare
+    uses: ./.github/workflows/test.yml
+    with:
+      should-run: ${{ needs.prepare.outputs.should_run == 'true' }}
+      source-sha: ${{ needs.prepare.outputs.source_sha }}
+
+  lint:
+    name: PR Lint
+    needs: prepare
+    uses: ./.github/workflows/lint.yml
+    with:
+      should-run: ${{ needs.prepare.outputs.should_run == 'true' }}
+      source-sha: ${{ needs.prepare.outputs.source_sha }}
+
+  gif-validation:
+    name: PR GIF Baseline Validation
+    needs: prepare
+    uses: ./.github/workflows/validate-gifs.yml
+    with:
+      should-run: ${{ needs.prepare.outputs.should_run == 'true' }}
+      source-sha: ${{ needs.prepare.outputs.source_sha }}

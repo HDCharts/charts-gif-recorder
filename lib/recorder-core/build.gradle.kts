@@ -1,3 +1,5 @@
+import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.compose)
@@ -5,26 +7,35 @@ plugins {
     `maven-publish`
     signing
     alias(libs.plugins.vanniktech.publish)
+    alias(libs.plugins.ktlint)
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(
+        libs.versions.java
+            .get()
+            .toInt(),
+    )
 }
 
 dokka {
     dokkaSourceSets.configureEach {
         documentedVisibilities.set(
-            setOf(org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier.Public),
+            setOf(VisibilityModifier.Public),
         )
         skipEmptyPackages.set(true)
-        jdkVersion.set(17)
+        jdkVersion.set(
+            libs.versions.java
+                .get()
+                .toInt(),
+        )
     }
 }
 
 dependencies {
     api(libs.compose.runtime)
     testImplementation(kotlin("test"))
-    testImplementation(libs.junit4)
+    testImplementation(libs.junit)
 }
 
 mavenPublishing {

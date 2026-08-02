@@ -1,0 +1,107 @@
+# Reusable workflow that validates the demo GIF baselines on a remote Android emulator.
+#
+# Generated GIFs and the comparison report are uploaded for manual review. This
+# workflow never modifies the pull request or repository contents.
+name: GIF Baseline Validation
+
+on:
+  workflow_call:
+    inputs:
+      should-run:
+        description: Whether the pull request contains code or build changes.
+        required: true
+        type: boolean
+      source-sha:
+        description: Immutable revision being checked.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate GIF baselines
+    if: ${{ inputs.should-run }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      FFMPEG_VERSION: 6.1.1
+      GIFSICLE_VERSION: 1.95
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+          ref: ${{ inputs.source-sha }}
+
+      - name: Read build toolchain versions
+        id: versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          CATALOG="gradle/libs.versions.toml"
+          JAVA_VERSION="$(sed -nE 's/^java = "([^"]+)"/\1/p' "$CATALOG")"
+          COMPILE_SDK="$(sed -nE 's/^androidCompileSdk = "([^"]+)"/\1/p' "$CATALOG")"
+          COMPILE_SDK_MINOR="$(sed -nE 's/^androidCompileSdkMinor = "([^"]+)"/\1/p' "$CATALOG")"
+          [[ -n "$JAVA_VERSION" && -n "$COMPILE_SDK" && -n "$COMPILE_SDK_MINOR" ]]
+          echo "java_version=$JAVA_VERSION" >> "$GITHUB_OUTPUT"
+          echo "compile_sdk=$COMPILE_SDK" >> "$GITHUB_OUTPUT"
+          echo "compile_sdk_minor=$COMPILE_SDK_MINOR" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          java-version: ${{ steps.versions.outputs.java_version }}
+          distribution: zulu
+          cache: gradle
+
+      - name: Install Android compile SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager "platforms;android-${{ steps.versions.outputs.compile_sdk }}.${{ steps.versions.outputs.compile_sdk_minor }}"
+
+      - name: Install GIF tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg gifsicle
+          ffmpeg -version | sed -n '1p' | grep -F "ffmpeg version ${FFMPEG_VERSION}"
+          gifsicle --version | grep -F "LCDF Gifsicle ${GIFSICLE_VERSION}"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Clear generated GIF outputs
+        run: |
+          mkdir -p app/artifacts/gifs
+          find app/artifacts/gifs -maxdepth 1 -type f -name '*.gif' -delete
+
+      - name: Validate GIF baselines on Android emulator
+        uses: reactivecircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed # v2.34.0
+        with:
+          # Keep the device API below compile/target SDK to exercise the
+          # recorder on a supported older Android runtime.
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./gradlew :app:validateGifBaselines --no-daemon --stacktrace
+
+      - name: Upload GIF validation artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gif-validation-${{ github.run_id }}
+          path: |
+            app/artifacts/gifs/*.gif
+            app/build/reports/gif-validation/**
+          if-no-files-found: warn
+          retention-days: 14

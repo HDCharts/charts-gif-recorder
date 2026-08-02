@@ -13,5 +13,6 @@ class ComposeGifRecorderPluginTest {
         assertNotNull(project.tasks.findByName("listGifScenarios"))
         assertNotNull(project.tasks.findByName("recordGifDebug"))
         assertNotNull(project.tasks.findByName("recordGifsDebug"))
+        assertNotNull(project.tasks.findByName("validateGifBaselines"))
     }
 }

@@ -1,3 +1,5 @@
+import org.jlleitschuh.gradle.ktlint.KtlintExtension
+
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     base
@@ -9,11 +11,11 @@ plugins {
 }
 
 subprojects {
-    apply(plugin = "org.jlleitschuh.gradle.ktlint")
-
-    extensions.configure<org.jlleitschuh.gradle.ktlint.KtlintExtension>("ktlint") {
-        android.set(true)
-        ignoreFailures.set(false)
+    plugins.withId("org.jlleitschuh.gradle.ktlint") {
+        extensions.configure<KtlintExtension>("ktlint") {
+            android.set(true)
+            ignoreFailures.set(false)
+        }
     }
 }
 

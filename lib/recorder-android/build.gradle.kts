@@ -1,30 +1,52 @@
+import org.jetbrains.dokka.gradle.engine.parameters.KotlinPlatform
+import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.android.library)
-    id("org.jetbrains.kotlin.android")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.dokka)
     `maven-publish`
     signing
     alias(libs.plugins.vanniktech.publish)
+    alias(libs.plugins.ktlint)
 }
 
 android {
     namespace = "io.github.hdcodedev.composegif.android"
-    compileSdk = 36
+    compileSdk {
+        version =
+            release(
+                libs.versions.androidCompileSdk
+                    .get()
+                    .toInt(),
+            ) {
+                minorApiLevel =
+                    libs.versions.androidCompileSdkMinor
+                        .get()
+                        .toInt()
+            }
+    }
 
     defaultConfig {
-        minSdk = 24
+        minSdk =
+            libs.versions.androidMinSdk
+                .get()
+                .toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.toVersion(libs.versions.java.get())
+        targetCompatibility = JavaVersion.toVersion(libs.versions.java.get())
     }
 
     kotlin {
         compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+            jvmTarget.set(
+                JvmTarget
+                    .fromTarget(libs.versions.java.get()),
+            )
         }
     }
 
@@ -46,7 +68,7 @@ dependencies {
     api(libs.androidx.test.ext.junit)
     api(libs.androidx.test.runner)
     api(libs.androidx.test.rules)
-    api(libs.junit4)
+    api(libs.junit)
 
     androidTestImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.compose.foundation)
@@ -59,12 +81,16 @@ dokka {
         sourceRoots.from(file("src/main/kotlin"))
         sourceRoots.from(file("src/main/java"))
         classpath.from(provider { configurations.getByName("releaseCompileClasspath") })
-        analysisPlatform.set(org.jetbrains.dokka.gradle.engine.parameters.KotlinPlatform.AndroidJVM)
+        analysisPlatform.set(KotlinPlatform.AndroidJVM)
         documentedVisibilities.set(
-            setOf(org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier.Public),
+            setOf(VisibilityModifier.Public),
         )
         skipEmptyPackages.set(true)
-        jdkVersion.set(17)
+        jdkVersion.set(
+            libs.versions.java
+                .get()
+                .toInt(),
+        )
     }
 }
 
