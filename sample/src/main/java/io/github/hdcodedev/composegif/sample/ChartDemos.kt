@@ -1,4 +1,4 @@
-package com.harisdautovic.gifdemo
+package io.github.hdcodedev.composegif.sample
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.harisdautovic.gifdemo.ui.theme.DemoTheme
 import io.github.dautovicharis.charts.LineChart
 import io.github.dautovicharis.charts.PieChart
 import io.github.dautovicharis.charts.model.toChartDataSet
@@ -30,6 +29,7 @@ import io.github.hdcodedev.composegif.annotations.GifSwipeDirection
 import io.github.hdcodedev.composegif.annotations.GifSwipeDistance
 import io.github.hdcodedev.composegif.annotations.GifSwipeSpeed
 import io.github.hdcodedev.composegif.annotations.RecordGif
+import io.github.hdcodedev.composegif.sample.ui.theme.DemoTheme
 
 @Composable
 fun ChartDemoScreen(modifier: Modifier = Modifier) {

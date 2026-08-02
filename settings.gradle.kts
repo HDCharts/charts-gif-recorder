@@ -45,4 +45,4 @@ includeBuild("lib") {
 }
 
 rootProject.name = "demo"
-include(":app")
+include(":sample")

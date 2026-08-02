@@ -19,13 +19,13 @@ subprojects {
     }
 }
 
-tasks.register("appTest") {
+tasks.register("sampleTest") {
     group = "verification"
-    description = "Runs app unit tests for the demo project"
-    dependsOn(":app:testDebugUnitTest")
+    description = "Runs sample unit tests for the demo project"
+    dependsOn(":sample:testDebugUnitTest")
 }
 
 tasks.named("clean") {
-    dependsOn(":app:clean")
+    dependsOn(":sample:clean")
     dependsOn(gradle.includedBuild("lib").task(":clean"))
 }

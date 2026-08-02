@@ -160,28 +160,27 @@ fun MultiLineChartDemo() {
 List available scenarios:
 
 ```bash
-./gradlew :app:listGifScenarios
+./gradlew :sample:listGifScenarios
 ```
 
 Record one scenario:
 
 ```bash
-./gradlew :app:recordGifDebug -PgifScenario=PieChartDemo
+./gradlew :sample:recordGifDebug -PgifScenario=PieChartDemo
 ```
 
 Record all scenarios:
 
 ```bash
-./gradlew :app:recordGifsDebug
+./gradlew :sample:recordGifsDebug
 ```
 
-Generated GIFs are written to `app/artifacts/gifs` (or your configured `outputDir`).
-If your application module is not named `app`, replace `:app:` in the commands.
+Generated GIFs are written to `sample/artifacts/gifs` (or your configured `outputDir`).
 
 Validate generated GIFs against `gif-baselines` locally when debugging:
 
 ```bash
-./gradlew :app:validateGifBaselines
+./gradlew :sample:validateGifBaselines
 ```
 
 The `gif-baselines` directory is the source-controlled reference set. Local
