@@ -32,14 +32,16 @@ dokka {
     }
 }
 
+val recorderVersion = project.version.toString()
+
 val generateVersionResource by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/version-resource")
-    inputs.property("version", ProjectConfig.version)
+    inputs.property("version", recorderVersion)
     outputs.dir(outputDir)
     doLast {
         val file = outputDir.get().file("compose-gif-recorder.version").asFile
         file.parentFile.mkdirs()
-        file.writeText(ProjectConfig.version)
+        file.writeText(recorderVersion)
     }
 }
 
@@ -89,7 +91,7 @@ mavenPublishing {
     coordinates(
         groupId = ProjectConfig.group,
         artifactId = "compose-gif-recorder-gradle-plugin",
-        version = ProjectConfig.version,
+        version = recorderVersion,
     )
 
     pom {

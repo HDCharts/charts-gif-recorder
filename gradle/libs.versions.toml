@@ -24,6 +24,7 @@ androidxTest = "1.7.0"
 androidxTestExt = "1.3.0"
 kotlinpoet = "2.3.0"
 dokka = "2.2.0"
+axionRelease = "1.21.2"
 
 [libraries]
 # The app consumes BOM-managed Compose aliases. Library modules use the
@@ -61,3 +62,4 @@ compose-gif-recorder = { id = "io.github.hdcodedev.compose-gif-recorder" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechPublish" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+axion-release = { id = "pl.allegro.tech.build.axion-release", version.ref = "axionRelease" }

@@ -61,7 +61,7 @@ jobs:
     name: Publish Snapshot Release
     runs-on: ubuntu-latest
     needs: changes
-    if: ${{ github.repository_owner == 'hdcodedev' && needs.changes.outputs.has_changes == 'true' }}
+    if: ${{ needs.changes.outputs.has_changes == 'true' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -84,18 +84,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Get snapshot version from lib/build.gradle.kts
+      - name: Get snapshot version from Axion
         id: version
         run: |
           set -euo pipefail
-          CONFIG_FILE="lib/buildSrc/src/main/kotlin/ProjectConfig.kt"
-          if [ ! -f "$CONFIG_FILE" ]; then
-            echo "Config file not found: $CONFIG_FILE" >&2
-            exit 1
-          fi
-          SNAPSHOT_VERSION=$(grep -E '^\s*const val version\s*=\s*"' "$CONFIG_FILE" | sed -E 's/.*"([^"]+)".*/\1/' | tr -d '\r' | xargs)
+          SNAPSHOT_VERSION="$(cd lib && ./gradlew -q currentVersion -Prelease.quiet)"
           if [ -z "${SNAPSHOT_VERSION:-}" ]; then
-            echo "Failed to parse version from $CONFIG_FILE" >&2
+            echo "Failed to resolve version from Axion currentVersion task." >&2
             exit 1
           fi
 

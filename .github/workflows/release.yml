@@ -19,7 +19,6 @@ jobs:
   release:
     name: Publish Release
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'hdcodedev' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,32 +41,29 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Get version from lib/build.gradle.kts
+      - name: Resolve release version from Axion
         id: version
         run: |
           set -euo pipefail
-          CONFIG_FILE="lib/buildSrc/src/main/kotlin/ProjectConfig.kt"
-          if [ ! -f "$CONFIG_FILE" ]; then
-            echo "Config file not found: $CONFIG_FILE" >&2
+          CURRENT_VERSION="$(cd lib && ./gradlew -q currentVersion -Prelease.quiet)"
+          if [[ "$CURRENT_VERSION" != *"-SNAPSHOT" ]]; then
+            echo "Expected an untagged SNAPSHOT version, got: ${CURRENT_VERSION}" >&2
             exit 1
           fi
-          VERSION=$(grep -E '^\s*const val version\s*=\s*"' "$CONFIG_FILE" | sed -E 's/.*"([^"]+)".*/\1/' | tr -d '\r' | xargs)
-          if [ -z "${VERSION:-}" ]; then
-            echo "Failed to parse version from $CONFIG_FILE" >&2
+          VERSION="${CURRENT_VERSION%-SNAPSHOT}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Resolved version is not SemVer-compatible: ${VERSION}" >&2
             exit 1
           fi
           echo "release_version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "📦 Release version: ${VERSION}"
 
-      - name: Verify version is not a SNAPSHOT
+      - name: Verify tag does not already exist
         run: |
-          VERSION="${{ steps.version.outputs.release_version }}"
-          if [[ "$VERSION" == *"-SNAPSHOT"* ]]; then
-            echo "❌ ERROR: Cannot release a SNAPSHOT version: $VERSION" >&2
-            echo "Please update lib/build.gradle.kts to a stable version (e.g., remove -SNAPSHOT suffix)" >&2
+          if git rev-parse -q --verify "refs/tags/${{ steps.version.outputs.release_version }}" >/dev/null; then
+            echo "Release tag already exists: ${{ steps.version.outputs.release_version }}" >&2
             exit 1
           fi
-          echo "✅ Version verified: $VERSION (not a SNAPSHOT)"
 
       - name: Check required secrets
         id: secrets_check
@@ -93,6 +89,15 @@ jobs:
             echo "can_publish=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Create release tag locally with Axion
+        if: ${{ steps.secrets_check.outputs.can_publish == 'true' }}
+        run: |
+          cd lib
+          ./gradlew createRelease \
+            -PrecorderReleaseVersion="${{ steps.version.outputs.release_version }}" \
+            -Prelease.disableRemoteCheck \
+            --no-daemon --stacktrace
+
       - name: Publish to Maven Central
         if: ${{ steps.secrets_check.outputs.can_publish == 'true' }}
         env:
@@ -106,6 +111,7 @@ jobs:
           echo "Publishing release version: ${{ steps.version.outputs.release_version }}"
           cd lib
           ./gradlew publishAllPublicationsToMavenCentralRepository \
+            -PrecorderReleaseVersion="${{ steps.version.outputs.release_version }}" \
             -PmavenCentralUsername="${MAVEN_CENTRAL_USERNAME}" \
             -PmavenCentralPassword="${MAVEN_CENTRAL_PASSWORD}" \
             -PsigningInMemoryKey="${SIGNING_IN_MEMORY_KEY}" \
@@ -113,15 +119,11 @@ jobs:
             -PsigningInMemoryKeyPassword="${SIGNING_PASSWORD}" \
             --no-daemon --no-build-cache --stacktrace
 
-      - name: Create Git Tag
+      - name: Push release tag with Axion
         if: ${{ steps.secrets_check.outputs.can_publish == 'true' }}
         run: |
-          VERSION="${{ steps.version.outputs.release_version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "${VERSION}" -m "Release version ${VERSION}"
-          git push origin "${VERSION}"
-          echo "✅ Git tag ${VERSION} created and pushed"
+          cd lib
+          ./gradlew pushRelease -Prelease.pushTagsOnly --no-daemon --stacktrace
 
       - name: Comment on success
         if: ${{ steps.secrets_check.outputs.can_publish == 'true' }}

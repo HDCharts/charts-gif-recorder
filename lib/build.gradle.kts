@@ -10,7 +10,24 @@ plugins {
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.vanniktech.publish) apply false
     alias(libs.plugins.ktlint) apply false
+    alias(libs.plugins.axion.release)
 }
+
+scmVersion {
+    tag {
+        prefix.set("")
+    }
+    repository {
+        directory.set(project.rootProject.file("../").absolutePath)
+    }
+    versionIncrementer("incrementPatch")
+}
+
+val recorderReleaseVersion =
+    providers.gradleProperty("recorderReleaseVersion")
+        .orNull
+        ?.takeIf { it.isNotBlank() }
+val resolvedVersion = recorderReleaseVersion ?: scmVersion.version
 
 val publishableModules = listOf(
     ":recorder-annotations",
@@ -37,7 +54,7 @@ subprojects {
 
 allprojects {
     group = ProjectConfig.group
-    version = ProjectConfig.version
+    version = resolvedVersion
 
     repositories {
         google()

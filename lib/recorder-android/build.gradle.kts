@@ -114,7 +114,7 @@ mavenPublishing {
     coordinates(
         groupId = ProjectConfig.group,
         artifactId = "compose-gif-recorder-android",
-        version = ProjectConfig.version,
+        version = project.version.toString(),
     )
 
     pom {

@@ -35,7 +35,7 @@ mavenPublishing {
     coordinates(
         groupId = ProjectConfig.group,
         artifactId = "compose-gif-recorder-annotations",
-        version = ProjectConfig.version,
+        version = project.version.toString(),
     )
 
     pom {
