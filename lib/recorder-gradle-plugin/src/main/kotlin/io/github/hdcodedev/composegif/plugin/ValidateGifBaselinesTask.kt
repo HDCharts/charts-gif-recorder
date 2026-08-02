@@ -78,6 +78,9 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
         )
 
         if (mismatches.isNotEmpty()) {
+            mismatches.forEach { mismatch ->
+                logger.error("GIF baseline mismatch: $mismatch")
+            }
             throw GradleException(
                 "GIF baseline validation failed for ${mismatches.size} file(s). " +
                     "See ${report.absolutePath} and the generated GIF artifacts.",

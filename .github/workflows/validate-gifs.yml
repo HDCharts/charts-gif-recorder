@@ -80,6 +80,31 @@ jobs:
           emulator-options: -no-window -no-audio -gpu swiftshader_indirect -no-snapshot
           script: ./gradlew :app:validateGifBaselines --no-daemon --stacktrace
 
+      - name: Report GIF baseline mismatches
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="app/build/reports/gif-validation/summary.txt"
+          if [[ ! -f "$report" ]]; then
+            echo "::warning title=GIF validation report missing::No GIF validation summary was produced at $report"
+            exit 0
+          fi
+
+          {
+            echo "### GIF baseline validation"
+            echo
+            cat "$report"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          while IFS= read -r line; do
+            [[ "$line" == "- "* ]] || continue
+            mismatch="${line#- }"
+            file="${mismatch%%:*}"
+            reason="${mismatch#*: }"
+            echo "::error file=gif-baselines/$file,title=GIF baseline mismatch::$reason"
+          done < "$report"
+
       - name: Upload GIF validation artifacts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
