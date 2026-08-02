@@ -25,6 +25,26 @@ for the [Charts wiki documentation](https://charts.harisdautovic.com/2.4.0/wiki/
 Whenever chart styles, animations, or APIs change,
 all documentation GIFs can be easily regenerated in an automated way.
 
+## Documentation
+
+- [API documentation](https://hdcharts.github.io/charts-gif-recorder/)
+- [Snapshot API documentation](https://hdcharts.github.io/charts-gif-recorder/snapshot/)
+
+To use a snapshot version, add the Maven Central snapshots repository to
+`settings.gradle.kts` and set `compose-gif-recorder` in your version catalog to
+the version shown by the snapshot badge above:
+
+```kotlin
+pluginManagement {
+    repositories {
+        google()
+        maven("https://central.sonatype.com/repository/maven-snapshots/")
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+```
+
 ## Requirements
 
 - Android app module using Jetpack Compose
@@ -32,11 +52,24 @@ all documentation GIFs can be easily regenerated in an automated way.
 - Installed tools on `PATH`: `adb`, `ffmpeg`, `ffprobe`, `gifsicle`
 - Running emulator or connected Android device
 
+## Generate baselines in CI (recommended)
+
+> **Recommended:** generate GIFs in CI when creating or updating committed
+> baselines. The [pull request workflow](.github/workflows/pull_request.yml)
+> runs the [GIF baseline validation workflow](.github/workflows/validate-gifs.yml)
+> on a controlled Android emulator with pinned recording tools, keeping output
+> deterministic across machines.
+
+If validation fails, download the `gif-validation-*` artifact to review the
+newly generated GIFs and the comparison report. If the visual change is
+intentional, replace the committed baseline files with the reviewed CI GIFs and
+commit them to the pull request.
+
 ## Use In Your App
 
 ### 1. Apply plugins in your app module
 
-Option A (recommended): use Version Catalog (`gradle/libs.versions.toml`)
+Use a Version Catalog (`gradle/libs.versions.toml`):
 
 ```toml
 [versions]
@@ -58,24 +91,6 @@ plugins {
 }
 ```
 
-Option B: apply plugin directly
-
-```kotlin
-plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")
-    id("io.github.hdcodedev.compose-gif-recorder") version "<version>"
-}
-```
-
-The plugin wires recorder dependencies automatically (`annotations`, `core`, `android`, `ksp`).
-It also adds `androidx.compose.ui:ui-test-manifest` using the required
-`libs.versions.composeUi` catalog version.
-
-Both plugin application options require a `libs.versions.toml` version catalog
-with `versions.composeUi` defined.
-
 ### 2. Configure the recorder
 
 Add this in your **app module** `build.gradle.kts` file (the same file where you applied the plugin):
@@ -91,6 +106,8 @@ gifRecorder {
 ```
 
 ### 3. How to use
+
+Each recording scenario must be a top-level, parameterless `@Composable` function.
 
 #### 3.1 Simple
 
@@ -167,22 +184,9 @@ Validate generated GIFs against `gif-baselines` locally when debugging:
 ./gradlew :app:validateGifBaselines
 ```
 
-The `gif-baselines` directory is the source-controlled reference set. The
-`app/artifacts/gifs` directory is generated output and is ignored by Git. Local
+The `gif-baselines` directory is the source-controlled reference set. Local
 recording and validation are diagnostic tools only; do not use GIFs generated
 on a local device or emulator to update the committed baselines.
-
-### CI validation
-
-Pull requests validate GIFs on a remote Android emulator when code or build
-files change. The workflow never modifies the branch or pull request. If
-validation fails, download the `gif-validation-*` artifact to review the newly
-generated GIFs and the comparison report. If the visual change is intentional,
-replace the committed baseline files with the reviewed CI GIFs and commit them
-to the pull request.
-
-The CI workflow intentionally exposes validation only; it does not provide a
-write-enabled manual regeneration run.
 
 ## Common Configuration
 
