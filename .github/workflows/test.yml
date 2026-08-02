@@ -70,9 +70,7 @@ jobs:
           profile: Nexus 6
           emulator-options: -no-window -no-audio -gpu swiftshader_indirect -no-snapshot
           script: |
-            set -eu
-            cd lib
-            ./gradlew recorderInstrumentationTest --no-daemon --stacktrace
+            cd lib && ./gradlew recorderInstrumentationTest --no-daemon --stacktrace
       - name: Upload Gradle test reports
         if: ${{ always() && inputs.should-run }}
         uses: actions/upload-artifact@v7.0.1
