@@ -24,7 +24,7 @@ jobs:
       should_run_gif_validation: ${{ steps.changes.outputs.should_run_gif_validation }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 

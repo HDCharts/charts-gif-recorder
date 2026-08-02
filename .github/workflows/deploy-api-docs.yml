@@ -29,7 +29,7 @@ jobs:
       cancel-in-progress: true
     steps:
       - name: Checkout source
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.source_ref }}
           fetch-depth: 0
@@ -64,7 +64,7 @@ jobs:
 
       - name: Checkout stable source
         if: ${{ inputs.mode == 'snapshot' }}
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ steps.stable.outputs.stable_ref }}
           fetch-depth: 1
@@ -102,10 +102,10 @@ jobs:
           fi
 
       - name: Configure Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4.0.0
+        uses: actions/upload-pages-artifact@v5.0.0
         with:
           path: site
 
@@ -122,4 +122,4 @@ jobs:
     steps:
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
