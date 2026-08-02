@@ -30,7 +30,7 @@ jobs:
       GIFSICLE_VERSION: 1.94
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 1
           ref: ${{ inputs.source-sha }}
@@ -69,7 +69,7 @@ jobs:
           find app/artifacts/gifs -maxdepth 1 -type f -name '*.gif' -delete
 
       - name: Validate GIF baselines on Android emulator
-        uses: reactivecircus/android-emulator-runner@1dcd0090116d15e7c562f8db72807de5e036a4ed # v2.34.0
+        uses: reactivecircus/android-emulator-runner@v2.37.0
         with:
           # Keep the device API below compile/target SDK to exercise the
           # recorder on a supported older Android runtime.
@@ -107,7 +107,7 @@ jobs:
 
       - name: Upload GIF validation artifacts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: gif-validation-${{ github.run_id }}
           path: |
