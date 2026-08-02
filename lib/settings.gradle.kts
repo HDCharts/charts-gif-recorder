@@ -24,5 +24,5 @@ dependencyResolutionManagement {
 include(":recorder-annotations")
 include(":recorder-core")
 include(":recorder-ksp")
-include(":recorder-android")
+include(":recorder-android-test")
 include(":recorder-gradle-plugin")

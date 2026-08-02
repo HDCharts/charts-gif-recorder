@@ -113,7 +113,7 @@ private fun DemoCard(demo: ChartDemo) {
 
 @RecordGif
 @Composable
-fun PieChartDemo() {
+internal fun PieChartDemo() {
     val dataSet =
         listOf(30f, 25f, 20f, 15f, 10f).toChartDataSet(
             title = "Market Share",
@@ -139,7 +139,7 @@ fun PieChartDemo() {
     ],
 )
 @Composable
-fun MultiLineChartDemo() {
+internal fun MultiLineChartDemo() {
     val items =
         listOf(
             "Web Store" to

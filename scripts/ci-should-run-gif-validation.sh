@@ -58,7 +58,7 @@ run_self_test() {
   local failures=0
   local result
 
-  result="$(is_gif_validation_change $'README.md\ndocs/README.md\nlib/recorder-android/build.gradle.kts')"
+  result="$(is_gif_validation_change $'README.md\ndocs/README.md\nlib/recorder-android-test/build.gradle.kts')"
   if ! assert_equal "false" "$result" "docs and Dokka-only changes"; then
     failures=$((failures + 1))
   fi

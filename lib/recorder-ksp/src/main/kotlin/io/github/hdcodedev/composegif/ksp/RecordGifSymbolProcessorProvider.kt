@@ -1,6 +1,7 @@
 package io.github.hdcodedev.composegif.ksp
 
 import com.google.devtools.ksp.processing.CodeGenerator
+import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
@@ -10,6 +11,7 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSValueArgument
+import com.google.devtools.ksp.symbol.Modifier
 import com.google.devtools.ksp.validate
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
@@ -26,6 +28,8 @@ import io.github.hdcodedev.composegif.annotations.RecordGif
 
 private const val GENERATED_PACKAGE = "io.github.hdcodedev.composegif.generated"
 private const val GENERATED_OBJECT_NAME = "GeneratedGifScenarioRegistry"
+private const val GENERATED_METADATA_FILE_NAME = "GeneratedGifScenarioMetadata"
+private const val METADATA_SCHEMA_VERSION = 1
 private const val DEFAULT_DURATION_MS = 3000
 private val VALID_SCENARIO_NAME_REGEX = Regex("[a-zA-Z0-9_\\-]+")
 
@@ -71,6 +75,14 @@ private class RecordGifSymbolProcessor(
             }
             if (function.parentDeclaration != null) {
                 logger.error("@RecordGif currently supports only top-level composable functions.", function)
+                hasErrors = true
+                return@forEach
+            }
+            if (Modifier.PRIVATE in function.modifiers) {
+                logger.error(
+                    "@RecordGif scenarios must be public or internal; private top-level functions cannot be referenced from the generated registry.",
+                    function,
+                )
                 hasErrors = true
                 return@forEach
             }
@@ -243,6 +255,22 @@ private class RecordGifSymbolProcessor(
             .addType(type)
             .build()
             .writeTo(codeGenerator = codeGenerator, aggregating = true)
+
+        codeGenerator
+            .createNewFile(
+                dependencies = Dependencies(aggregating = true),
+                packageName = GENERATED_PACKAGE,
+                fileName = GENERATED_METADATA_FILE_NAME,
+                extensionName = "properties",
+            ).bufferedWriter()
+            .use { writer ->
+                writer.appendLine("schema=$METADATA_SCHEMA_VERSION")
+                writer.appendLine("count=${entries.size}")
+                entries.forEachIndexed { index, entry ->
+                    writer.appendLine("scenario.$index.name=${entry.name}")
+                    writer.appendLine("scenario.$index.fps=${entry.fps}")
+                }
+            }
     }
 
     private fun KSFunctionDeclaration.extractArguments(): AnnotationArgs {

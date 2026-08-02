@@ -39,8 +39,8 @@ includeBuild("lib") {
             .using(project(":recorder-core"))
         substitute(module("io.github.hdcodedev:compose-gif-recorder-ksp"))
             .using(project(":recorder-ksp"))
-        substitute(module("io.github.hdcodedev:compose-gif-recorder-android"))
-            .using(project(":recorder-android"))
+        substitute(module("io.github.hdcodedev:compose-gif-recorder-android-test"))
+            .using(project(":recorder-android-test"))
     }
 }
 

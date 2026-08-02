@@ -61,19 +61,19 @@ internal abstract class RecordGifTask : DefaultTask() {
 
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
-    public abstract val generatedRegistryFile: RegularFileProperty
+    public abstract val scenarioMetadataFile: RegularFileProperty
 
     @TaskAction
     public fun record() {
-        val registrySource = generatedRegistryFile.get().asFile
-        if (!registrySource.exists()) {
+        val metadataFile = scenarioMetadataFile.get().asFile
+        if (!metadataFile.exists()) {
             throw IllegalStateException(
-                "Generated registry not found at ${registrySource.path}. Run kspDebugKotlin first.",
+                "Generated scenario metadata not found at ${metadataFile.path}. Run kspDebugKotlin first.",
             )
         }
 
-        val scenarioNames = parseScenarioNames(registrySource)
-        if (scenarioNames.isEmpty()) {
+        val scenarios = parseScenarioMetadata(metadataFile)
+        if (scenarios.isEmpty()) {
             throw IllegalStateException("No scenarios found to record.")
         }
 
@@ -83,7 +83,7 @@ internal abstract class RecordGifTask : DefaultTask() {
         ensureBinaryExists(ffprobeBin.get())
         ensureBinaryExists(gifsicleBin.get())
 
-        val selected = selectedScenarios(scenarioNames)
+        val selected = selectedScenarios(scenarios)
         val serial = resolveDeviceSerial(resolvedAdbBin, adbSerial.get())
         val adbPrefix = listOf(resolvedAdbBin, "-s", serial)
 
@@ -91,29 +91,32 @@ internal abstract class RecordGifTask : DefaultTask() {
         outputRoot.mkdirs()
 
         selected.forEach { scenarioName ->
-            if (!scenarioNames.contains(scenarioName)) {
-                throw IllegalStateException("Scenario '$scenarioName' not found. Available: $scenarioNames")
+            val metadata = scenarios.firstOrNull { it.name == scenarioName }
+            if (metadata == null) {
+                throw IllegalStateException(
+                    "Scenario '$scenarioName' not found. Available: ${scenarios.map { it.name }}",
+                )
             }
             recordScenario(
                 scenarioName = scenarioName,
-                registrySource = registrySource,
+                fps = metadata.fps,
                 adbPrefix = adbPrefix,
                 outputRoot = outputRoot,
             )
         }
     }
 
-    private fun selectedScenarios(scenarioNames: List<String>): List<String> =
+    private fun selectedScenarios(scenarios: List<GifScenarioMetadata>): List<String> =
         if (allScenarios.get()) {
-            scenarioNames
+            scenarios.map { it.name }
         } else {
             val requested = scenario.get().takeIf { it.isNotBlank() && it != "all" }
-            listOf(requested ?: scenarioNames.first())
+            listOf(requested ?: scenarios.first().name)
         }
 
     private fun recordScenario(
         scenarioName: String,
-        registrySource: File,
+        fps: Int,
         adbPrefix: List<String>,
         outputRoot: File,
     ) {
@@ -166,7 +169,6 @@ internal abstract class RecordGifTask : DefaultTask() {
                 deleteRecursively()
                 mkdirs()
             }
-        val fps = parseScenarioFps(registrySource, scenarioName) ?: 50
         normalizeFrames(localScenarioDir, normalizedDir, effectiveHeight, fps)
 
         val palette = File(temporaryDir, "$scenarioName.palette.png")
@@ -438,5 +440,5 @@ internal fun RecordGifTask.configureFromExtension(
     testClass.convention(extension.testClass)
     gifWidth.convention(extension.gifWidth)
     gifHeight.convention(extension.gifHeight)
-    generatedRegistryFile.convention(project.layout.buildDirectory.file(GENERATED_REGISTRY_FILE))
+    scenarioMetadataFile.convention(project.layout.buildDirectory.file(GENERATED_SCENARIO_METADATA_FILE))
 }
