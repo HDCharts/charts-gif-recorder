@@ -34,6 +34,10 @@ android {
                 .get()
                 .toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // GifFrameCaptureTest is packaged for consuming apps and needs their generated registry.
+        // Keep this module's own instrumentation run focused on registry-independent tests.
+        testInstrumentationRunnerArguments["class"] =
+            "io.github.hdcodedev.composegif.android.GifGestureRunnerTest"
     }
 
     compileOptions {
