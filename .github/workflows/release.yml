@@ -24,7 +24,7 @@ jobs:
       release_version: ${{ steps.version.outputs.release_version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
@@ -35,7 +35,7 @@ jobs:
           distribution: 'zulu'
 
       - name: Cache Gradle packages
-        uses: actions/cache@v5.1.0
+        uses: actions/cache@v6.1.0
         with:
           path: |
             ~/.gradle/caches
