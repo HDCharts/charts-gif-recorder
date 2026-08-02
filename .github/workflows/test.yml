@@ -25,7 +25,7 @@ jobs:
     if: ${{ inputs.should-run }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 1
           ref: ${{ inputs.source-sha }}
@@ -35,13 +35,13 @@ jobs:
           bash scripts/ci-has-code-changes.sh --self-test
           bash scripts/ci-should-run-gif-validation.sh --self-test
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5.6.0
         with:
           java-version: 17
           distribution: 'zulu'
           cache: gradle
       - name: Cache Gradle packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5.1.0
         with:
           path: |
             ~/.gradle/caches
@@ -57,7 +57,7 @@ jobs:
           ./gradlew recorderTest
       - name: Upload Gradle test reports
         if: ${{ always() && inputs.should-run }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: gradle-test-reports
           if-no-files-found: warn

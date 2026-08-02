@@ -1,0 +1,125 @@
+# Reusable workflow: build stable and snapshot Dokka API docs and deploy them
+# together to GitHub Pages. The complete site is rebuilt on every deployment
+# because a Pages artifact replaces the previous site.
+name: Deploy API Docs
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: "Release mode that invoked the deployment."
+        required: true
+        type: string
+      source_ref:
+        description: "Commit being released or published as a snapshot."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build Dokka Docs
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pages-build
+      cancel-in-progress: true
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6.0.2
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+          path: source
+
+      - name: Resolve API versions with Axion
+        id: stable
+        working-directory: source
+        env:
+          DOCS_MODE: ${{ inputs.mode }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          source_version="$(./gradlew -p lib -q currentVersion -Prelease.quiet)"
+          case "${DOCS_MODE}" in
+            release)
+              echo "Release docs use the source checkout."
+              ;;
+            snapshot)
+              stable_ref="$(./gradlew -p lib -q axionPreviousVersion -Prelease.quiet)"
+              echo "Stable API docs source: ${stable_ref}"
+              echo "stable_ref=${stable_ref}" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Unsupported docs mode: ${DOCS_MODE}" >&2
+              exit 1
+              ;;
+          esac
+
+          echo "Source API docs version: ${source_version}"
+
+      - name: Checkout stable source
+        if: ${{ inputs.mode == 'snapshot' }}
+        uses: actions/checkout@v6.0.2
+        with:
+          ref: ${{ steps.stable.outputs.stable_ref }}
+          fetch-depth: 1
+          path: stable-source
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5.6.0
+        with:
+          distribution: zulu
+          java-version: "17"
+          cache: gradle
+
+      - name: Generate source API docs
+        working-directory: source
+        run: ./gradlew -p lib dokkaPublicApi --no-daemon
+
+      - name: Generate stable API docs
+        if: ${{ inputs.mode == 'snapshot' }}
+        working-directory: stable-source
+        run: ./gradlew -p lib dokkaPublicApi --no-daemon
+
+      - name: Prepare Pages artifact
+        shell: bash
+        env:
+          DOCS_MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          mkdir -p site/snapshot
+          if [ "${DOCS_MODE}" = "release" ]; then
+            cp -R source/lib/build/dokka/public-api/. site/
+            cp -R source/lib/build/dokka/public-api/. site/snapshot/
+          else
+            cp -R stable-source/lib/build/dokka/public-api/. site/
+            cp -R source/lib/build/dokka/public-api/. site/snapshot/
+          fi
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4.0.0
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

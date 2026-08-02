@@ -29,6 +29,14 @@ val recorderReleaseVersion =
         ?.takeIf { it.isNotBlank() }
 val resolvedVersion = recorderReleaseVersion ?: scmVersion.version
 
+tasks.register("axionPreviousVersion") {
+    group = "versioning"
+    description = "Prints the previous stable version resolved by Axion"
+    doLast {
+        println(scmVersion.previousVersion)
+    }
+}
+
 val publishableModules = listOf(
     ":recorder-annotations",
     ":recorder-core",
