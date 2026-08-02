@@ -47,8 +47,8 @@ run_self_test() {
     failures=$((failures + 1))
   fi
 
-  result="$(is_code_change $'README.md\napp/src/main/java/com/example/Foo.kt')"
-  if ! assert_equal "true" "$result" "app source change"; then
+  result="$(is_code_change $'README.md\nsample/src/main/java/com/example/Foo.kt')"
+  if ! assert_equal "true" "$result" "sample source change"; then
     failures=$((failures + 1))
   fi
 

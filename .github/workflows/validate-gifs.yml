@@ -65,8 +65,8 @@ jobs:
 
       - name: Clear generated GIF outputs
         run: |
-          mkdir -p app/artifacts/gifs
-          find app/artifacts/gifs -maxdepth 1 -type f -name '*.gif' -delete
+          mkdir -p sample/artifacts/gifs
+          find sample/artifacts/gifs -maxdepth 1 -type f -name '*.gif' -delete
 
       - name: Validate GIF baselines on Android emulator
         uses: reactivecircus/android-emulator-runner@v2.38.0
@@ -78,14 +78,14 @@ jobs:
           arch: x86_64
           profile: Nexus 6
           emulator-options: -no-window -no-audio -gpu swiftshader_indirect -no-snapshot
-          script: ./gradlew :app:validateGifBaselines --no-daemon --stacktrace
+          script: ./gradlew :sample:validateGifBaselines --no-daemon --stacktrace
 
       - name: Report GIF baseline mismatches
         if: always()
         shell: bash
         run: |
           set -euo pipefail
-          report="app/build/reports/gif-validation/summary.txt"
+          report="sample/build/reports/gif-validation/summary.txt"
           if [[ ! -f "$report" ]]; then
             echo "::warning title=GIF validation report missing::No GIF validation summary was produced at $report"
             exit 0
@@ -111,7 +111,7 @@ jobs:
         with:
           name: gif-validation-${{ github.run_id }}
           path: |
-            app/artifacts/gifs/*.gif
-            app/build/reports/gif-validation/**
+            sample/artifacts/gifs/*.gif
+            sample/build/reports/gif-validation/**
           if-no-files-found: warn
           retention-days: 14

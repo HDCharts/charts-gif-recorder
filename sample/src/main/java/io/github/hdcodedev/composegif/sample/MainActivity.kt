@@ -1,10 +1,10 @@
-package com.harisdautovic.gifdemo
+package io.github.hdcodedev.composegif.sample
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.harisdautovic.gifdemo.ui.theme.DemoTheme
+import io.github.hdcodedev.composegif.sample.ui.theme.DemoTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

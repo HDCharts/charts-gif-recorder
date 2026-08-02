@@ -1,4 +1,4 @@
-package com.harisdautovic.gifdemo.ui.theme
+package io.github.hdcodedev.composegif.sample.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

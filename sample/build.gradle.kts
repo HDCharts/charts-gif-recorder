@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.harisdautovic.gifdemo"
+    namespace = "io.github.hdcodedev.composegif.sample"
     compileSdk {
         version =
             release(
@@ -25,7 +25,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.harisdautovic.gifdemo"
+        applicationId = "io.github.hdcodedev.composegif.sample"
         minSdk =
             libs.versions.androidMinSdk
                 .get()
@@ -67,7 +67,7 @@ android {
 }
 
 gifRecorder {
-    applicationId.set("com.harisdautovic.gifdemo")
+    applicationId.set("io.github.hdcodedev.composegif.sample")
     outputDir.set(layout.projectDirectory.dir("artifacts/gifs"))
 }
 

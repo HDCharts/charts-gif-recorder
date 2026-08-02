@@ -5,7 +5,7 @@ is_gif_validation_path() {
   local changed_file="$1"
 
   case "$changed_file" in
-    app/*|gif-baselines/*|gradle/libs.versions.toml|gradle/wrapper/*|gradlew|gradlew.bat|build.gradle.kts|settings.gradle.kts|gradle.properties|.github/workflows/validate-gifs.yml)
+    sample/*|gif-baselines/*|gradle/libs.versions.toml|gradle/wrapper/*|gradlew|gradlew.bat|build.gradle.kts|settings.gradle.kts|gradle.properties|.github/workflows/validate-gifs.yml)
       return 0
       ;;
     lib/recorder-*/src/*)
@@ -63,8 +63,8 @@ run_self_test() {
     failures=$((failures + 1))
   fi
 
-  result="$(is_gif_validation_change "app/src/main/java/com/example/Demo.kt")"
-  if ! assert_equal "true" "$result" "app source change"; then
+  result="$(is_gif_validation_change "sample/src/main/java/com/example/Demo.kt")"
+  if ! assert_equal "true" "$result" "sample source change"; then
     failures=$((failures + 1))
   fi
 

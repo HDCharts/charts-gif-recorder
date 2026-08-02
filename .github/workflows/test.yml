@@ -52,7 +52,7 @@ jobs:
       - name: Test
         run: |
           set -euo pipefail
-          ./gradlew appTest
+          ./gradlew sampleTest
           cd lib
           ./gradlew recorderTest
       - name: Upload Gradle test reports
