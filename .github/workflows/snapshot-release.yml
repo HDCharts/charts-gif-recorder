@@ -1,4 +1,4 @@
-# Workflow: publish a snapshot release when recent changes justify it.
+# Workflow: publish a weekly snapshot release when recent changes justify it.
 # It can also be triggered manually.
 #
 # This is the automated pre-release path for the repo.
@@ -6,7 +6,8 @@ name: Snapshot Release
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'
+    # Runs weekly on Sunday at 00:00 UTC.
+    - cron: '0 0 * * 0'
 
 permissions:
   contents: write
@@ -40,19 +41,19 @@ jobs:
             exit 0
           fi
 
-          files=$(git log --since="24 hours ago" --name-only --pretty=format: | sort -u)
+          files=$(git log --since="7 days ago" --name-only --pretty=format: | sort -u)
           if [ -z "${files:-}" ]; then
-            echo "No commits in the last 24 hours."
+            echo "No commits in the last 7 days."
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           filtered=$(echo "$files" | grep -vE '(^docs/|\.md$|^\.github/workflows/deploy-api-docs\.yml$)' || true)
           if [ -z "${filtered:-}" ]; then
-            echo "Only ignored paths changed in the last 24 hours."
+            echo "Only ignored paths changed in the last 7 days."
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Changes detected in the last 24 hours:"
+            echo "Changes detected in the last 7 days:"
             echo "$filtered"
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
           fi
@@ -139,6 +140,8 @@ jobs:
           SIGNING_IN_MEMORY_KEY: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          ORG_GRADLE_PROJECT_mavenCentralPublishing: "true"
+          ORG_GRADLE_PROJECT_signAllPublications: "true"
         run: |
           set -euo pipefail
           echo "Publishing snapshot version: ${{ steps.version.outputs.snapshot_version }}"
@@ -169,7 +172,7 @@ jobs:
               'Add the snapshot repository to your project:',
               '```kotlin',
               'repositories {',
-              '    maven("https://s01.oss.sonatype.org/content/repositories/snapshots/")',
+              '    maven("https://central.sonatype.com/repository/maven-snapshots/")',
               '}',
               '```',
               '',
