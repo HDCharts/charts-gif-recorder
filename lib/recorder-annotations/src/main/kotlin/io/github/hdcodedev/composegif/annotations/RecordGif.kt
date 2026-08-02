@@ -16,7 +16,7 @@ package io.github.hdcodedev.composegif.annotations
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.BINARY)
-public annotation class RecordGif(
+annotation class RecordGif(
     val name: String = "",
     val durationMs: Int = 3000,
     val fps: Int = 50,
@@ -35,13 +35,13 @@ public annotation class RecordGif(
 )
 
 /** Available visual themes for generated GIF scenarios. */
-public enum class GifTheme {
+enum class GifTheme {
     LIGHT,
     DARK,
 }
 
 /** Gesture primitives used by low-level replay steps. */
-public enum class GifGestureType {
+enum class GifGestureType {
     PAUSE,
     TAP,
     DRAG_PATH,

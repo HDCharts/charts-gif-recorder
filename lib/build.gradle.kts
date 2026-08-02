@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.Copy
+import org.jlleitschuh.gradle.ktlint.KtlintExtension
 
 plugins {
     base
@@ -26,11 +27,11 @@ dependencies {
 }
 
 subprojects {
-    apply(plugin = "org.jlleitschuh.gradle.ktlint")
-
-    extensions.configure<org.jlleitschuh.gradle.ktlint.KtlintExtension>("ktlint") {
-        android.set(true)
-        ignoreFailures.set(false)
+    plugins.withId("org.jlleitschuh.gradle.ktlint") {
+        extensions.configure<KtlintExtension>("ktlint") {
+            android.set(true)
+            ignoreFailures.set(false)
+        }
     }
 }
 

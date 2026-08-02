@@ -1,83 +1,55 @@
 package io.github.hdcodedev.composegif.plugin
 
-import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.model.ObjectFactory
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.PathSensitive
-import org.gradle.api.tasks.PathSensitivity
-import org.gradle.api.tasks.TaskAction
-import java.io.File
-import java.io.IOException
-import javax.inject.Inject
-import kotlin.math.max
-
-private const val GENERATED_REGISTRY_FILE =
-    "generated/ksp/debug/kotlin/" +
-        "io/github/hdcodedev/composegif/generated/GeneratedGifScenarioRegistry.kt"
-private const val GENERATED_REGISTRY_CLASS = "io.github.hdcodedev.composegif.generated.GeneratedGifScenarioRegistry"
-private const val DEFAULT_TEST_CLASS = "io.github.hdcodedev.composegif.android.GifFrameCaptureTest"
-private const val DEFAULT_COMPOSE_UI_VERSION = "1.10.3"
-
-private val DEFAULT_LIBRARY_VERSION: String by lazy {
-    ComposeGifRecorderPlugin::class.java
-        .classLoader
-        .getResourceAsStream("compose-gif-recorder.version")
-        ?.use { it.bufferedReader().readText() }
-        ?.trim()
-        ?: error("compose-gif-recorder.version resource not found")
-}
-private const val DEFAULT_REMOTE_SUBDIR = "gif-recorder"
-
-/**
- * Configuration DSL for the Compose GIF Recorder Gradle plugin.
- *
- * @property applicationId Android application ID used for instrumentation and device pull paths.
- * @property outputDir Directory where generated GIFs are written.
- * @property adbSerial Device serial, or `auto` to pick a single connected device.
- * @property adbBin `adb` executable path or command name.
- * @property ffmpegBin `ffmpeg` executable path or command name.
- * @property ffprobeBin `ffprobe` executable path or command name.
- * @property gifsicleBin `gifsicle` executable path or command name.
- * @property scenario Scenario name to capture, or `all`.
- * @property registryClass Generated registry class name used by instrumentation.
- * @property testClass Instrumentation test class used for frame capture.
- * @property libraryVersion Recorder library version injected into app dependencies.
- * @property gifWidth Output GIF width in pixels.
- * @property gifHeight Output GIF height in pixels. Use `0` for auto height.
- */
-public abstract class GifRecorderExtension
-    @Inject
-    constructor(
-        objects: ObjectFactory,
-    ) {
-        public val applicationId: Property<String> = objects.property(String::class.java)
-        public val outputDir: DirectoryProperty = objects.directoryProperty()
-        public val adbSerial: Property<String> = objects.property(String::class.java)
-        public val adbBin: Property<String> = objects.property(String::class.java)
-        public val ffmpegBin: Property<String> = objects.property(String::class.java)
-        public val ffprobeBin: Property<String> = objects.property(String::class.java)
-        public val gifsicleBin: Property<String> = objects.property(String::class.java)
-        public val scenario: Property<String> = objects.property(String::class.java)
-        public val registryClass: Property<String> = objects.property(String::class.java)
-        public val testClass: Property<String> = objects.property(String::class.java)
-        public val libraryVersion: Property<String> = objects.property(String::class.java)
-        public val gifWidth: Property<Int> = objects.property(Int::class.java)
-        public val gifHeight: Property<Int> = objects.property(Int::class.java)
-    }
+import org.gradle.api.UnknownDomainObjectException
+import org.gradle.api.artifacts.VersionCatalogsExtension
 
 /** Gradle plugin that wires recorder dependencies and capture tasks into Android app projects. */
-public class ComposeGifRecorderPlugin : Plugin<Project> {
+class ComposeGifRecorderPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val extension = project.extensions.create("gifRecorder", GifRecorderExtension::class.java)
+        configureDefaults(project, extension)
 
+        val listTask =
+            project.tasks.register("listGifScenarios", ListGifScenariosTask::class.java) { task ->
+                task.generatedRegistryFile.convention(project.layout.buildDirectory.file(GENERATED_REGISTRY_FILE))
+            }
+        val singleTask =
+            project.tasks.register("recordGifDebug", RecordGifTask::class.java) { task ->
+                task.configureFromExtension(project, extension)
+                task.allScenarios.convention(false)
+                task.dependsOn(listTask)
+            }
+        val allTask =
+            project.tasks.register("recordGifsDebug", RecordGifTask::class.java) { task ->
+                task.configureFromExtension(project, extension)
+                task.allScenarios.convention(true)
+                task.dependsOn(listTask)
+            }
+
+        project.tasks.register("validateGifBaselines", ValidateGifBaselinesTask::class.java) { task ->
+            task.actualGifDir.set(allTask.flatMap { it.outputDir })
+            task.baselineDir.convention(extension.baselineDir)
+            task.reportDir.convention(extension.validationReportDir)
+            task.ffmpegBin.convention(extension.ffmpegBin)
+            task.ffprobeBin.convention(extension.ffprobeBin)
+            task.dependsOn(allTask)
+        }
+
+        project.plugins.withId("com.android.application") {
+            configureDependencies(project, extension)
+            listTask.configure { it.dependsOn("kspDebugKotlin") }
+            singleTask.configure { it.dependsOn("kspDebugKotlin", "installDebug", "installDebugAndroidTest") }
+            allTask.configure { it.dependsOn("kspDebugKotlin", "installDebug", "installDebugAndroidTest") }
+        }
+    }
+
+    private fun configureDefaults(
+        project: Project,
+        extension: GifRecorderExtension,
+    ) {
         extension.outputDir.convention(project.layout.projectDirectory.dir("artifacts/gifs"))
         extension.adbSerial.convention("auto")
         extension.adbBin.convention("adb")
@@ -90,38 +62,11 @@ public class ComposeGifRecorderPlugin : Plugin<Project> {
         extension.libraryVersion.convention(DEFAULT_LIBRARY_VERSION)
         extension.gifWidth.convention(540)
         extension.gifHeight.convention(0)
-
-        val listTask = project.tasks.register("listGifScenarios", ListGifScenariosTask::class.java)
-        listTask.configure { task ->
-            task.generatedRegistryFile.convention(project.layout.buildDirectory.file(GENERATED_REGISTRY_FILE))
-        }
-
-        val singleTask = project.tasks.register("recordGifDebug", RecordGifTask::class.java)
-        singleTask.configure { task ->
-            task.configureFromExtension(project, extension)
-            task.allScenarios.convention(false)
-            task.dependsOn(listTask)
-        }
-
-        val allTask = project.tasks.register("recordGifsDebug", RecordGifTask::class.java)
-        allTask.configure { task ->
-            task.configureFromExtension(project, extension)
-            task.allScenarios.convention(true)
-            task.dependsOn(listTask)
-        }
-
-        project.plugins.withId("com.android.application") {
-            configureDependencies(project, extension)
-            listTask.configure { task ->
-                task.dependsOn("kspDebugKotlin")
-            }
-            singleTask.configure { task ->
-                task.dependsOn("kspDebugKotlin", "installDebug", "installDebugAndroidTest")
-            }
-            allTask.configure { task ->
-                task.dependsOn("kspDebugKotlin", "installDebug", "installDebugAndroidTest")
-            }
-        }
+        extension.baselineDir.convention(
+            project.rootProject.layout.projectDirectory
+                .dir("gif-baselines"),
+        )
+        extension.validationReportDir.convention(project.layout.buildDirectory.dir("reports/gif-validation"))
     }
 
     private fun configureDependencies(
@@ -129,7 +74,7 @@ public class ComposeGifRecorderPlugin : Plugin<Project> {
         extension: GifRecorderExtension,
     ) {
         val version = extension.libraryVersion.getOrElse(DEFAULT_LIBRARY_VERSION)
-
+        val composeUiVersion = project.composeUiVersion()
         project.dependencies.add("implementation", "io.github.hdcodedev:compose-gif-recorder-annotations:$version")
         project.dependencies.add("implementation", "io.github.hdcodedev:compose-gif-recorder-core:$version")
         project.dependencies.add("implementation", "io.github.hdcodedev:compose-gif-recorder-android:$version")
@@ -140,511 +85,27 @@ public class ComposeGifRecorderPlugin : Plugin<Project> {
         )
         project.dependencies.add(
             "debugImplementation",
-            "androidx.compose.ui:ui-test-manifest:$DEFAULT_COMPOSE_UI_VERSION",
-        )
-    }
-}
-
-private fun RecordGifTask.configureFromExtension(
-    project: Project,
-    extension: GifRecorderExtension,
-) {
-    applicationId.convention(extension.applicationId)
-    outputDir.convention(extension.outputDir)
-    adbSerial.convention(extension.adbSerial)
-    adbBin.convention(extension.adbBin)
-    ffmpegBin.convention(extension.ffmpegBin)
-    ffprobeBin.convention(extension.ffprobeBin)
-    gifsicleBin.convention(extension.gifsicleBin)
-    scenario.convention(project.providers.gradleProperty("gifScenario").orElse(extension.scenario))
-    registryClass.convention(extension.registryClass)
-    testClass.convention(extension.testClass)
-    gifWidth.convention(extension.gifWidth)
-    gifHeight.convention(extension.gifHeight)
-    generatedRegistryFile.convention(project.layout.buildDirectory.file(GENERATED_REGISTRY_FILE))
-}
-
-internal abstract class ListGifScenariosTask : DefaultTask() {
-    @get:Internal
-    public abstract val generatedRegistryFile: RegularFileProperty
-
-    @TaskAction
-    public fun listScenarios() {
-        val file = generatedRegistryFile.get().asFile
-        if (!file.exists()) {
-            throw IllegalStateException(
-                "Generated registry not found at ${file.path}. Run kspDebugKotlin first.",
-            )
-        }
-        val names = parseScenarioNames(file)
-        if (names.isEmpty()) {
-            throw IllegalStateException("No GIF scenarios found in generated registry.")
-        }
-
-        logger.lifecycle("Compose GIF scenarios:")
-        names.forEach { logger.lifecycle(" - $it") }
-    }
-}
-
-internal abstract class RecordGifTask : DefaultTask() {
-    init {
-        outputs.upToDateWhen { false }
-    }
-
-    @get:Input
-    public abstract val applicationId: Property<String>
-
-    @get:OutputDirectory
-    public abstract val outputDir: DirectoryProperty
-
-    @get:Input
-    public abstract val adbSerial: Property<String>
-
-    @get:Input
-    public abstract val adbBin: Property<String>
-
-    @get:Input
-    public abstract val ffmpegBin: Property<String>
-
-    @get:Input
-    public abstract val ffprobeBin: Property<String>
-
-    @get:Input
-    public abstract val gifsicleBin: Property<String>
-
-    @get:Input
-    public abstract val scenario: Property<String>
-
-    @get:Input
-    public abstract val registryClass: Property<String>
-
-    @get:Input
-    public abstract val testClass: Property<String>
-
-    @get:Input
-    public abstract val gifWidth: Property<Int>
-
-    @get:Input
-    public abstract val gifHeight: Property<Int>
-
-    @get:Input
-    public abstract val allScenarios: Property<Boolean>
-
-    @get:InputFile
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    public abstract val generatedRegistryFile: RegularFileProperty
-
-    @TaskAction
-    public fun record() {
-        val registrySource = generatedRegistryFile.get().asFile
-        if (!registrySource.exists()) {
-            throw IllegalStateException(
-                "Generated registry not found at ${registrySource.path}. Run kspDebugKotlin first.",
-            )
-        }
-
-        val scenarioNames = parseScenarioNames(registrySource)
-        if (scenarioNames.isEmpty()) {
-            throw IllegalStateException("No scenarios found to record.")
-        }
-
-        val resolvedAdbBin = resolveAdbBinary()
-        ensureBinaryExists(resolvedAdbBin)
-        ensureBinaryExists(ffmpegBin.get())
-        ensureBinaryExists(ffprobeBin.get())
-        ensureBinaryExists(gifsicleBin.get())
-
-        val selected =
-            if (allScenarios.get()) {
-                scenarioNames
-            } else {
-                val requested = scenario.get().takeIf { it.isNotBlank() && it != "all" } ?: scenarioNames.first()
-                listOf(requested)
-            }
-
-        val serial = resolveDeviceSerial(resolvedAdbBin, adbSerial.get())
-        val adbPrefix = listOf(resolvedAdbBin, "-s", serial)
-
-        val outputRoot = outputDir.get().asFile
-        outputRoot.mkdirs()
-
-        selected.forEach { scenarioName ->
-            if (!scenarioNames.contains(scenarioName)) {
-                throw IllegalStateException("Scenario '$scenarioName' not found. Available: $scenarioNames")
-            }
-            logger.lifecycle("Recording scenario '$scenarioName' on device '$serial'")
-
-            runChecked(
-                adbPrefix +
-                    listOf(
-                        "shell",
-                        "am",
-                        "instrument",
-                        "-w",
-                        "-e",
-                        "class",
-                        "${testClass.get()}#captureScenario",
-                        "-e",
-                        "registry_class",
-                        registryClass.get(),
-                        "-e",
-                        "scenario_name",
-                        scenarioName,
-                        "-e",
-                        "output_subdir",
-                        DEFAULT_REMOTE_SUBDIR,
-                        "${applicationId.get()}.test/androidx.test.runner.AndroidJUnitRunner",
-                    ),
-            )
-
-            val localScenarioDir =
-                File(temporaryDir, "frames/$scenarioName").apply {
-                    deleteRecursively()
-                    mkdirs()
-                }
-
-            val remoteScenarioDir =
-                "/sdcard/Android/data/${applicationId.get()}/files/$DEFAULT_REMOTE_SUBDIR/$scenarioName"
-            runChecked(adbPrefix + listOf("pull", "$remoteScenarioDir/.", localScenarioDir.absolutePath))
-
-            val frames =
-                localScenarioDir
-                    .listFiles { file ->
-                        file.name.matches(Regex("frame-\\d{4}\\.png"))
-                    }?.sortedBy { it.name }
-                    ?: emptyList()
-            if (frames.isEmpty()) {
-                throw IllegalStateException("No frames found for scenario '$scenarioName'.")
-            }
-
-            val effectiveHeight = resolveCanvasHeight(frames)
-            val normalizedDir =
-                File(temporaryDir, "normalized/$scenarioName").apply {
-                    deleteRecursively()
-                    mkdirs()
-                }
-
-            val fps = resolveFpsFromRegistry(registrySource, scenarioName)
-            val scaleFilter =
-                "scale=${gifWidth.get()}:$effectiveHeight:flags=lanczos:force_original_aspect_ratio=decrease," +
-                    "pad=${gifWidth.get()}:$effectiveHeight:(ow-iw)/2:(oh-ih)/2:color=black,format=rgb24"
-            runChecked(
-                listOf(
-                    ffmpegBin.get(),
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-y",
-                    "-framerate",
-                    fps.toString(),
-                    "-i",
-                    "${localScenarioDir.absolutePath}/frame-%04d.png",
-                    "-vf",
-                    scaleFilter,
-                    "${normalizedDir.absolutePath}/frame-%04d.png",
-                ),
-            )
-
-            val palette = File(temporaryDir, "$scenarioName.palette.png")
-            val baseGif = File(temporaryDir, "$scenarioName.base.gif")
-            val finalGif = File(outputRoot, "$scenarioName.gif")
-
-            runChecked(
-                listOf(
-                    ffmpegBin.get(),
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-y",
-                    "-framerate",
-                    fps.toString(),
-                    "-i",
-                    "${normalizedDir.absolutePath}/frame-%04d.png",
-                    "-vf",
-                    "palettegen=stats_mode=full",
-                    "-frames:v",
-                    "1",
-                    palette.absolutePath,
-                ),
-            )
-
-            runChecked(
-                listOf(
-                    ffmpegBin.get(),
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-y",
-                    "-framerate",
-                    fps.toString(),
-                    "-i",
-                    "${normalizedDir.absolutePath}/frame-%04d.png",
-                    "-i",
-                    palette.absolutePath,
-                    "-lavfi",
-                    "paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle",
-                    baseGif.absolutePath,
-                ),
-            )
-
-            runChecked(
-                listOf(
-                    gifsicleBin.get(),
-                    "--no-warnings",
-                    "--optimize=3",
-                    "--lossy=0",
-                    "--colors",
-                    "256",
-                    baseGif.absolutePath,
-                    "-o",
-                    finalGif.absolutePath,
-                ),
-            )
-
-            logger.lifecycle("Generated GIF: ${finalGif.absolutePath}")
-        }
-    }
-
-    private fun resolveDeviceSerial(
-        adb: String,
-        configuredSerial: String,
-    ): String {
-        if (configuredSerial != "auto") return configuredSerial
-        val output = runChecked(listOf(adb, "devices"))
-        val devices =
-            output
-                .lineSequence()
-                .drop(1)
-                .map { it.trim() }
-                .filter { it.endsWith("\tdevice") }
-                .map { it.substringBefore("\t") }
-                .toList()
-        if (devices.isEmpty()) {
-            throw IllegalStateException("No connected Android device/emulator found.")
-        }
-        if (devices.size > 1) {
-            throw IllegalStateException("Multiple devices found: $devices. Configure gifRecorder.adbSerial.")
-        }
-        return devices.first()
-    }
-
-    private fun resolveCanvasHeight(frames: List<File>): Int {
-        val configuredHeight = gifHeight.get()
-        if (configuredHeight > 0) return configuredHeight
-
-        var maxScaledHeight = 0
-        frames.forEach { frame ->
-            val dims =
-                runChecked(
-                    listOf(
-                        ffprobeBin.get(),
-                        "-v",
-                        "error",
-                        "-select_streams",
-                        "v:0",
-                        "-show_entries",
-                        "stream=width,height",
-                        "-of",
-                        "csv=p=0:s=x",
-                        frame.absolutePath,
-                    ),
-                ).trim()
-            val parts = dims.split("x")
-            check(parts.size == 2) { "Could not resolve frame dimensions from $dims" }
-            val width = parts[0].toInt()
-            val height = parts[1].toInt()
-            val scaled = (height * gifWidth.get() + width - 1) / width
-            if (scaled > maxScaledHeight) maxScaledHeight = scaled
-        }
-
-        return max(1, maxScaledHeight)
-    }
-
-    private fun resolveFpsFromRegistry(
-        registryFile: File,
-        scenarioName: String,
-    ): Int = parseScenarioFps(registryFile, scenarioName) ?: 50
-
-    private fun resolveAdbBinary(): String {
-        val configured = adbBin.get().trim()
-        if (configured.isBlank()) {
-            throw IllegalStateException("gifRecorder.adbBin cannot be blank.")
-        }
-
-        val configuredFile = File(configured)
-        if (configuredFile.isAbsolute || configured.contains(File.separatorChar)) {
-            return configured
-        }
-
-        val executableName = if (isWindows()) "adb.exe" else "adb"
-        if (configured != executableName && configured != "adb") {
-            return configured
-        }
-
-        findExecutableOnPath(executableName)?.let { return it }
-
-        val userHome = System.getProperty("user.home").orEmpty()
-        val candidates =
-            buildList {
-                addSdkCandidate(System.getenv("ANDROID_SDK_ROOT"), executableName)
-                addSdkCandidate(System.getenv("ANDROID_HOME"), executableName)
-                addSdkCandidate("$userHome/Library/Android/sdk", executableName)
-                addSdkCandidate("$userHome/Android/Sdk", executableName)
-            }.distinct()
-
-        val matched = candidates.firstOrNull { File(it).exists() }
-        if (matched != null) return matched
-
-        throw IllegalStateException(
-            buildString {
-                append("Could not locate adb automatically. ")
-                append("Install Android SDK platform-tools or set gifRecorder.adbBin to an absolute adb path. ")
-                append("Checked ANDROID_SDK_ROOT, ANDROID_HOME, and common SDK paths: ")
-                append(candidates.joinToString())
-            },
+            "androidx.compose.ui:ui-test-manifest:$composeUiVersion",
         )
     }
 
-    private fun findExecutableOnPath(binaryName: String): String? {
-        val pathValue = System.getenv("PATH") ?: return null
-        val separator = File.pathSeparatorChar
-        return pathValue
-            .split(separator)
-            .asSequence()
-            .map { File(it, binaryName) }
-            .firstOrNull { it.exists() && it.isFile }
-            ?.absolutePath
-    }
-
-    private fun MutableList<String>.addSdkCandidate(
-        sdkRoot: String?,
-        executableName: String,
-    ) {
-        if (sdkRoot.isNullOrBlank()) return
-        add(File(sdkRoot, "platform-tools/$executableName").absolutePath)
-    }
-
-    private fun isWindows(): Boolean = System.getProperty("os.name").contains("win", ignoreCase = true)
-
-    private fun ensureBinaryExists(binary: String) {
-        val resolved =
-            if (binary.contains(File.separatorChar)) {
-                File(binary).takeIf { it.exists() && it.isFile }?.absolutePath
-            } else {
-                findExecutableOnPath(binary)
-            }
-        if (resolved == null) {
-            throw IllegalStateException("Binary not found or not executable: $binary")
-        }
-    }
-
-    private fun runChecked(command: List<String>): String {
-        val process =
+    private fun Project.composeUiVersion(): String {
+        val catalogs =
+            extensions.findByType(VersionCatalogsExtension::class.java)
+                ?: throw GradleException(
+                    "The Compose GIF recorder requires a libs.versions.toml version catalog.",
+                )
+        val composeUiVersion =
             try {
-                ProcessBuilder(command).directory(project.projectDir).redirectErrorStream(true).start()
-            } catch (error: IOException) {
-                throw IllegalStateException(
-                    "Failed to start command (${command.joinToString(" ")}): ${error.message}",
+                catalogs.named("libs").findVersion("composeUi").orElse(null)
+            } catch (error: UnknownDomainObjectException) {
+                throw GradleException(
+                    "The Compose GIF recorder requires the libs version catalog.",
                     error,
                 )
-            }
-        val output = process.inputStream.bufferedReader().readText()
-        val exit = process.waitFor()
-        if (exit != 0) {
-            throw IllegalStateException("Command failed (${command.joinToString(" ")}):\n$output")
-        }
-        return output
+            } ?: throw GradleException(
+                "The Compose GIF recorder requires libs.versions.composeUi to be defined.",
+            )
+        return composeUiVersion.requiredVersion
     }
-}
-
-internal fun parseScenarioNames(generatedRegistry: File): List<String> {
-    if (!generatedRegistry.exists()) return emptyList()
-    val text = generatedRegistry.readText()
-    val regex = Regex("name\\s*=\\s*\"([^\"]+)\"")
-    return regex
-        .findAll(text)
-        .map { it.groupValues[1] }
-        .distinct()
-        .toList()
-}
-
-internal fun parseScenarioFps(
-    generatedRegistry: File,
-    scenarioName: String,
-): Int? {
-    if (!generatedRegistry.exists()) return null
-    val text = generatedRegistry.readText()
-    val captureBlock = findScenarioCaptureBlock(text, scenarioName) ?: return null
-    return Regex("""\bfps\s*=\s*(\d+)""")
-        .find(captureBlock)
-        ?.groupValues
-        ?.get(1)
-        ?.toIntOrNull()
-}
-
-private fun findScenarioCaptureBlock(
-    registryText: String,
-    scenarioName: String,
-): String? {
-    var searchFrom = 0
-    val namePattern = Regex("""\bname\s*=\s*"([^"]+)"""")
-    val capturePattern = Regex("""\bcapture\s*=\s*GifCaptureConfig\s*\(""")
-
-    while (true) {
-        val scenarioSpecStart = registryText.indexOf("GifScenarioSpec(", startIndex = searchFrom)
-        if (scenarioSpecStart == -1) return null
-
-        val specOpenParen = registryText.indexOf('(', startIndex = scenarioSpecStart)
-        if (specOpenParen == -1) return null
-
-        val specCloseParen = findMatchingClosingParen(registryText, specOpenParen) ?: return null
-        val specBody = registryText.substring(specOpenParen + 1, specCloseParen)
-
-        val parsedName = namePattern.find(specBody)?.groupValues?.get(1)
-        if (parsedName == scenarioName) {
-            val captureMatch = capturePattern.find(specBody) ?: return null
-            val captureOpenParen = captureMatch.range.last
-            val captureCloseParen = findMatchingClosingParen(specBody, captureOpenParen) ?: return null
-            return specBody.substring(captureOpenParen + 1, captureCloseParen)
-        }
-
-        searchFrom = specCloseParen + 1
-    }
-}
-
-private fun findMatchingClosingParen(
-    text: String,
-    openingParenIndex: Int,
-): Int? {
-    if (openingParenIndex !in text.indices || text[openingParenIndex] != '(') return null
-
-    var depth = 0
-    var inString = false
-    var escaped = false
-
-    for (index in openingParenIndex until text.length) {
-        val char = text[index]
-
-        if (inString) {
-            if (escaped) {
-                escaped = false
-            } else if (char == '\\') {
-                escaped = true
-            } else if (char == '"') {
-                inString = false
-            }
-            continue
-        }
-
-        when (char) {
-            '"' -> inString = true
-            '(' -> depth += 1
-            ')' -> {
-                depth -= 1
-                if (depth == 0) return index
-            }
-        }
-    }
-
-    return null
 }
