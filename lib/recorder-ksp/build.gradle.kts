@@ -46,7 +46,7 @@ mavenPublishing {
     coordinates(
         groupId = ProjectConfig.group,
         artifactId = "compose-gif-recorder-ksp",
-        version = ProjectConfig.version,
+        version = project.version.toString(),
     )
 
     pom {

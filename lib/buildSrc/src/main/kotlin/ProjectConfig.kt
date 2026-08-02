@@ -1,6 +1,5 @@
 object ProjectConfig {
     const val group = "io.github.hdcodedev"
-    const val version = "0.1.2"
     const val projectUrl = "https://github.com/hdcodedev/compose-gif-recorder"
     const val licenseName = "MIT License"
     const val licenseUrl = "$projectUrl/blob/main/LICENSE.md"
