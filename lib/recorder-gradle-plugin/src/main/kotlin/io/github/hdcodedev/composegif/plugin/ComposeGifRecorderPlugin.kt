@@ -14,7 +14,9 @@ class ComposeGifRecorderPlugin : Plugin<Project> {
 
         val listTask =
             project.tasks.register("listGifScenarios", ListGifScenariosTask::class.java) { task ->
-                task.generatedRegistryFile.convention(project.layout.buildDirectory.file(GENERATED_REGISTRY_FILE))
+                task.scenarioMetadataFile.convention(
+                    project.layout.buildDirectory.file(GENERATED_SCENARIO_METADATA_FILE),
+                )
             }
         val singleTask =
             project.tasks.register("recordGifDebug", RecordGifTask::class.java) { task ->
@@ -77,11 +79,10 @@ class ComposeGifRecorderPlugin : Plugin<Project> {
         val composeUiVersion = project.composeUiVersion()
         project.dependencies.add("implementation", "io.github.hdcodedev:compose-gif-recorder-annotations:$version")
         project.dependencies.add("implementation", "io.github.hdcodedev:compose-gif-recorder-core:$version")
-        project.dependencies.add("implementation", "io.github.hdcodedev:compose-gif-recorder-android:$version")
         project.dependencies.add("ksp", "io.github.hdcodedev:compose-gif-recorder-ksp:$version")
         project.dependencies.add(
             "androidTestImplementation",
-            "io.github.hdcodedev:compose-gif-recorder-android:$version",
+            "io.github.hdcodedev:compose-gif-recorder-android-test:$version",
         )
         project.dependencies.add(
             "debugImplementation",

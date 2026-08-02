@@ -2,29 +2,32 @@ package io.github.hdcodedev.composegif.plugin
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 
 internal abstract class ListGifScenariosTask : DefaultTask() {
-    @get:Internal
-    public abstract val generatedRegistryFile: RegularFileProperty
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    public abstract val scenarioMetadataFile: RegularFileProperty
 
     @TaskAction
     public fun listScenarios() {
-        val file = generatedRegistryFile.get().asFile
+        val file = scenarioMetadataFile.get().asFile
         if (!file.exists()) {
             throw IllegalStateException(
-                "Generated registry not found at ${file.path}. Run kspDebugKotlin first.",
+                "Generated scenario metadata not found at ${file.path}. Run kspDebugKotlin first.",
             )
         }
-        val names = parseScenarioNames(file)
-        if (names.isEmpty()) {
-            throw IllegalStateException("No GIF scenarios found in generated registry.")
+        val scenarios = parseScenarioMetadata(file)
+        if (scenarios.isEmpty()) {
+            throw IllegalStateException("No GIF scenarios found in generated metadata.")
         }
 
         logger.lifecycle("Compose GIF scenarios:")
-        names.forEach { logger.lifecycle(" - $it") }
+        scenarios.forEach { logger.lifecycle(" - ${it.name}") }
     }
 }
 

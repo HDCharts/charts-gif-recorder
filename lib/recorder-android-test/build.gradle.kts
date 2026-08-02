@@ -13,7 +13,7 @@ plugins {
 }
 
 android {
-    namespace = "io.github.hdcodedev.composegif.android"
+    namespace = "io.github.hdcodedev.composegif.android.test"
     compileSdk {
         version =
             release(
@@ -34,6 +34,10 @@ android {
                 .get()
                 .toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // GifFrameCaptureTest is packaged for consuming apps and needs their generated registry.
+        // Keep this module's own instrumentation run focused on registry-independent tests.
+        testInstrumentationRunnerArguments["class"] =
+            "io.github.hdcodedev.composegif.android.GifGestureRunnerTest"
     }
 
     compileOptions {
@@ -64,7 +68,6 @@ dependencies {
     implementation(libs.activity.compose)
 
     api(libs.compose.ui.test.junit4)
-    api(libs.compose.ui.test.manifest)
     api(libs.androidx.test.ext.junit)
     api(libs.androidx.test.runner)
     api(libs.androidx.test.rules)
@@ -113,15 +116,15 @@ mavenPublishing {
 
     coordinates(
         groupId = ProjectConfig.group,
-        artifactId = "compose-gif-recorder-android",
+        artifactId = "compose-gif-recorder-android-test",
         version = project.version.toString(),
     )
 
     pom {
         ProjectPublishing.configurePom(
             pom = this,
-            moduleName = "Compose GIF Recorder Android",
-            moduleDescription = "Android deterministic frame capture runtime for compose-gif-recorder",
+            moduleName = "Compose GIF Recorder Android Test",
+            moduleDescription = "Android instrumentation capture harness for compose-gif-recorder",
         )
     }
 }

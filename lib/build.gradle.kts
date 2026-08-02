@@ -41,7 +41,7 @@ val publishableModules = listOf(
     ":recorder-annotations",
     ":recorder-core",
     ":recorder-ksp",
-    ":recorder-android",
+    ":recorder-android-test",
     ":recorder-gradle-plugin"
 )
 
@@ -81,7 +81,13 @@ tasks.register("recorderTest") {
     group = "verification"
     description = "Runs JVM/unit tests for all recorder modules"
     dependsOn(testableJvmModules.map { "$it:test" })
-    dependsOn(":recorder-android:testDebugUnitTest")
+    dependsOn(":recorder-android-test:testDebugUnitTest")
+}
+
+tasks.register("recorderInstrumentationTest") {
+    group = "verification"
+    description = "Runs Android instrumentation tests for the recorder Android test module"
+    dependsOn(":recorder-android-test:connectedDebugAndroidTest")
 }
 
 tasks.register("publishRecorderModules") {

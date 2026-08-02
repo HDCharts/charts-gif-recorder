@@ -183,7 +183,7 @@ jobs:
               '}',
               '```',
               '',
-              'The plugin automatically adds all required dependencies (`annotations`, `core`, `android`, `ksp`).',
+              'The plugin automatically adds all required dependencies (`annotations`, `core`, `android-test`, `ksp`).',
             ].join('\n');
 
             await github.rest.repos.createCommitComment({

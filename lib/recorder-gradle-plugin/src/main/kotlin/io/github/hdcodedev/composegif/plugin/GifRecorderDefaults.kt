@@ -1,8 +1,8 @@
 package io.github.hdcodedev.composegif.plugin
 
-internal const val GENERATED_REGISTRY_FILE =
-    "generated/ksp/debug/kotlin/" +
-        "io/github/hdcodedev/composegif/generated/GeneratedGifScenarioRegistry.kt"
+internal const val GENERATED_SCENARIO_METADATA_FILE =
+    "generated/ksp/debug/resources/" +
+        "io/github/hdcodedev/composegif/generated/GeneratedGifScenarioMetadata.properties"
 internal const val GENERATED_REGISTRY_CLASS = "io.github.hdcodedev.composegif.generated.GeneratedGifScenarioRegistry"
 internal const val DEFAULT_TEST_CLASS = "io.github.hdcodedev.composegif.android.GifFrameCaptureTest"
 
