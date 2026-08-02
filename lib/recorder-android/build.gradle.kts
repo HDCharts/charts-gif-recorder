@@ -77,20 +77,24 @@ dependencies {
 }
 
 dokka {
-    dokkaSourceSets.maybeCreate("main").apply {
-        sourceRoots.from(file("src/main/kotlin"))
-        sourceRoots.from(file("src/main/java"))
-        classpath.from(provider { configurations.getByName("releaseCompileClasspath") })
-        analysisPlatform.set(KotlinPlatform.AndroidJVM)
-        documentedVisibilities.set(
-            setOf(VisibilityModifier.Public),
-        )
-        skipEmptyPackages.set(true)
-        jdkVersion.set(
-            libs.versions.java
-                .get()
-                .toInt(),
-        )
+    dokkaSourceSets.configureEach {
+        if (name == "androidJvm") {
+            suppress.set(true)
+        } else if (name == "release") {
+            sourceRoots.from(file("src/main/kotlin"))
+            sourceRoots.from(file("src/main/java"))
+            classpath.from(provider { configurations.getByName("releaseCompileClasspath") })
+            analysisPlatform.set(KotlinPlatform.AndroidJVM)
+            documentedVisibilities.set(
+                setOf(VisibilityModifier.Public),
+            )
+            skipEmptyPackages.set(true)
+            jdkVersion.set(
+                libs.versions.java
+                    .get()
+                    .toInt(),
+            )
+        }
     }
 }
 
