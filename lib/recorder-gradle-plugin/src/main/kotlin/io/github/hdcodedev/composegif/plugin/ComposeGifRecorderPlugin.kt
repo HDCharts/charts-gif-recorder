@@ -37,6 +37,7 @@ class ComposeGifRecorderPlugin : Plugin<Project> {
             task.reportDir.convention(extension.validationReportDir)
             task.ffmpegBin.convention(extension.ffmpegBin)
             task.ffprobeBin.convention(extension.ffprobeBin)
+            task.maxChangedPixelPercentage.convention(extension.maxChangedPixelPercentage)
             task.dependsOn(allTask)
         }
 
@@ -64,6 +65,7 @@ class ComposeGifRecorderPlugin : Plugin<Project> {
         extension.libraryVersion.convention(DEFAULT_LIBRARY_VERSION)
         extension.gifWidth.convention(540)
         extension.gifHeight.convention(0)
+        extension.maxChangedPixelPercentage.convention(DEFAULT_MAX_CHANGED_PIXEL_PERCENTAGE)
         extension.baselineDir.convention(
             project.rootProject.layout.projectDirectory
                 .dir("gif-baselines"),

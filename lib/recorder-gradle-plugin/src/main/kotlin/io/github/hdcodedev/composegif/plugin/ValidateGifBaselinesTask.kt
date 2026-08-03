@@ -32,6 +32,9 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
     @get:Input
     public abstract val ffprobeBin: Property<String>
 
+    @get:Input
+    public abstract val maxChangedPixelPercentage: Property<Double>
+
     @get:OutputDirectory
     public abstract val reportDir: DirectoryProperty
 
@@ -41,6 +44,11 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
         val baselineFiles = gifFiles(baselineDir.get().asFile).associateBy { it.name }
         if (baselineFiles.isEmpty()) {
             throw IllegalStateException("No GIF baselines found in ${baselineDir.get().asFile.absolutePath}.")
+        }
+        val maxChangedPixelPercentage = maxChangedPixelPercentage.get()
+        require(maxChangedPixelPercentage in 0.0..100.0) {
+            "maxChangedPixelPercentage must be in range [0.0, 100.0], " +
+                "where 1.0 means 1%, was $maxChangedPixelPercentage."
         }
 
         val reportRoot =
@@ -56,7 +64,7 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
                 actual == null -> mismatches += "$name: generated GIF is missing"
                 baseline == null -> mismatches += "$name: GIF baseline is missing"
                 else ->
-                    compareGifs(baseline, actual)?.let { reason ->
+                    compareGifs(baseline, actual, maxChangedPixelPercentage)?.let { reason ->
                         mismatches += "$name: $reason"
                     }
             }
@@ -69,6 +77,7 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
                 appendLine("Baselines: ${baselineDir.get().asFile.absolutePath}")
                 appendLine("Generated: ${actualGifDir.get().asFile.absolutePath}")
                 appendLine("Compared: ${baselineFiles.keys.intersect(actualFiles.keys).size}")
+                appendLine("Max changed pixels per frame: ${formatPercentage(maxChangedPixelPercentage)}%")
                 appendLine("Mismatches: ${mismatches.size}")
                 if (mismatches.isNotEmpty()) {
                     appendLine()
@@ -92,6 +101,7 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
     private fun compareGifs(
         baseline: File,
         actual: File,
+        maxChangedPixelPercentage: Double,
     ): String? {
         val expected = decodeGif(baseline)
         val received = decodeGif(actual)
@@ -109,19 +119,14 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
             return "decoded pixel buffer size differs: expected ${expected.pixels.size}, " +
                 "received ${received.pixels.size}"
         }
-        if (expected.pixels.contentEquals(received.pixels)) return null
-
-        val firstDifference =
-            expected.pixels.indices.first { index ->
-                expected.pixels[index] != received.pixels[index]
-            }
-        val pixelIndex = firstDifference / 4
-        val frameSize = expected.width * expected.height
-        val frame = pixelIndex / frameSize
-        val pixelInFrame = pixelIndex % frameSize
-        val x = pixelInFrame % expected.width
-        val y = pixelInFrame / expected.width
-        return "pixel content differs at frame $frame, x=$x, y=$y"
+        return compareDecodedPixels(
+            expected = expected.pixels,
+            received = received.pixels,
+            width = expected.width,
+            height = expected.height,
+            frameCount = expected.frameCount,
+            maxChangedPixelPercentage = maxChangedPixelPercentage,
+        )
     }
 
     private fun decodeGif(file: File): DecodedGif {
@@ -226,3 +231,57 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
         val pixels: ByteArray,
     )
 }
+
+internal const val DEFAULT_MAX_CHANGED_PIXEL_PERCENTAGE = 1.0
+
+internal fun compareDecodedPixels(
+    expected: ByteArray,
+    received: ByteArray,
+    width: Int,
+    height: Int,
+    frameCount: Int,
+    maxChangedPixelPercentage: Double,
+): String? {
+    if (expected.contentEquals(received)) return null
+
+    val pixelsPerFrame = width * height
+    val bytesPerFrame = pixelsPerFrame * 4
+    var totalChangedPixels = 0
+    var maxChangedPixels = 0
+    var maxChangedFrame = 0
+
+    repeat(frameCount) { frame ->
+        var changedPixels = 0
+        val frameStart = frame * bytesPerFrame
+        for (pixel in 0 until pixelsPerFrame) {
+            val pixelStart = frameStart + (pixel * 4)
+            var differs = false
+            repeat(4) { channel ->
+                val expectedValue = expected[pixelStart + channel].toInt() and 0xFF
+                val receivedValue = received[pixelStart + channel].toInt() and 0xFF
+                if (expectedValue != receivedValue) {
+                    differs = true
+                }
+            }
+            if (differs) changedPixels++
+        }
+        totalChangedPixels += changedPixels
+        if (changedPixels > maxChangedPixels) {
+            maxChangedPixels = changedPixels
+            maxChangedFrame = frame
+        }
+    }
+
+    val changedPixelPercentage = maxChangedPixels * 100.0 / pixelsPerFrame
+    if (changedPixelPercentage <= maxChangedPixelPercentage) return null
+
+    val totalPixels = pixelsPerFrame * frameCount
+    val totalChangedPercentage = totalChangedPixels * 100.0 / totalPixels
+    return "pixel content differs: " +
+        "$maxChangedPixels/$pixelsPerFrame pixels (${formatPercentage(changedPixelPercentage)}%) " +
+        "in frame $maxChangedFrame; " +
+        "$totalChangedPixels/$totalPixels pixels (${formatPercentage(totalChangedPercentage)}%) " +
+        "across GIF (allowed ${formatPercentage(maxChangedPixelPercentage)}% per frame)"
+}
+
+private fun formatPercentage(value: Double): String = "%.4f".format(java.util.Locale.US, value)
