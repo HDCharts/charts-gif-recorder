@@ -2,6 +2,7 @@ package io.github.hdcodedev.composegif.plugin
 
 import org.gradle.testfixtures.ProjectBuilder
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class ComposeGifRecorderPluginTest {
@@ -14,5 +15,8 @@ class ComposeGifRecorderPluginTest {
         assertNotNull(project.tasks.findByName("recordGifDebug"))
         assertNotNull(project.tasks.findByName("recordGifsDebug"))
         assertNotNull(project.tasks.findByName("validateGifBaselines"))
+
+        val extension = project.extensions.getByType(GifRecorderExtension::class.java)
+        assertEquals(DEFAULT_MAX_CHANGED_PIXEL_PERCENTAGE, extension.maxChangedPixelPercentage.get())
     }
 }

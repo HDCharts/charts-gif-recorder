@@ -23,6 +23,9 @@ import javax.inject.Inject
  * @property gifHeight Output GIF height in pixels. Use `0` for auto height.
  * @property baselineDir Directory containing source-controlled GIF baselines.
  * @property validationReportDir Directory where baseline validation reports are written.
+ * @property maxChangedPixelPercentage Maximum percentage of pixels allowed to differ
+ * between a generated GIF and its baseline for each frame. For example, `1.0` allows
+ * 1% of pixels to differ. `0.0` keeps exact pixel comparison.
  */
 abstract class GifRecorderExtension
     @Inject
@@ -44,4 +47,5 @@ abstract class GifRecorderExtension
         val gifHeight: Property<Int> = objects.property(Int::class.java)
         val baselineDir: DirectoryProperty = objects.directoryProperty()
         val validationReportDir: DirectoryProperty = objects.directoryProperty()
+        val maxChangedPixelPercentage: Property<Double> = objects.property(Double::class.java)
     }
