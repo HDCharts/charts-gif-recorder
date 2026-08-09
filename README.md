@@ -20,7 +20,7 @@
 ## Motivation
 
 This plugin was originally created to automate GIF generation
-for the [Charts wiki documentation](https://charts.hdcode.dev/).
+for the [HDCharts wiki documentation](https://charts.hdcode.dev/).
 
 Whenever chart styles, animations, or APIs change,
 all documentation GIFs can be easily regenerated in an automated way.
