@@ -102,6 +102,9 @@ gifRecorder {
     outputDir.set(
         layout.projectDirectory.dir("artifacts/gifs"),
     )
+    // Optional. Defaults to black. Used to fill unused areas when frames are
+    // normalized to a common canvas.
+    canvasBackgroundColor.set("0xFCFCFD")
     // Optional. Defaults to 1.0%, allowing 1 changed pixel in a 100-pixel frame.
     maxChangedPixelPercentage.set(1.0)
 }
