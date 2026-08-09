@@ -21,6 +21,7 @@ import javax.inject.Inject
  * @property libraryVersion Recorder library version injected into app dependencies.
  * @property gifWidth Output GIF width in pixels.
  * @property gifHeight Output GIF height in pixels. Use `0` for auto height.
+ * @property canvasBackgroundColor Background color used to fill unused areas when frames are normalized to a common canvas.
  * @property baselineDir Directory containing source-controlled GIF baselines.
  * @property validationReportDir Directory where baseline validation reports are written.
  * @property maxChangedPixelPercentage Maximum percentage of pixels allowed to differ
@@ -45,6 +46,7 @@ abstract class GifRecorderExtension
         val libraryVersion: Property<String> = objects.property(String::class.java)
         val gifWidth: Property<Int> = objects.property(Int::class.java)
         val gifHeight: Property<Int> = objects.property(Int::class.java)
+        val canvasBackgroundColor: Property<String> = objects.property(String::class.java)
         val baselineDir: DirectoryProperty = objects.directoryProperty()
         val validationReportDir: DirectoryProperty = objects.directoryProperty()
         val maxChangedPixelPercentage: Property<Double> = objects.property(Double::class.java)

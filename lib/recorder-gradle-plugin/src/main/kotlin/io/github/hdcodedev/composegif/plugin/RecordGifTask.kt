@@ -57,6 +57,9 @@ internal abstract class RecordGifTask : DefaultTask() {
     public abstract val gifHeight: Property<Int>
 
     @get:Input
+    public abstract val canvasBackgroundColor: Property<String>
+
+    @get:Input
     public abstract val allScenarios: Property<Boolean>
 
     @get:InputFile
@@ -188,7 +191,7 @@ internal abstract class RecordGifTask : DefaultTask() {
     ) {
         val scaleFilter =
             "scale=${gifWidth.get()}:$height:flags=lanczos:force_original_aspect_ratio=decrease," +
-                "pad=${gifWidth.get()}:$height:(ow-iw)/2:(oh-ih)/2:color=black,format=rgb24"
+                "pad=${gifWidth.get()}:$height:(ow-iw)/2:(oh-ih)/2:color=${canvasBackgroundColor.get()},format=rgb24"
         runChecked(
             listOf(
                 ffmpegBin.get(),
@@ -440,5 +443,6 @@ internal fun RecordGifTask.configureFromExtension(
     testClass.convention(extension.testClass)
     gifWidth.convention(extension.gifWidth)
     gifHeight.convention(extension.gifHeight)
+    canvasBackgroundColor.convention(extension.canvasBackgroundColor)
     scenarioMetadataFile.convention(project.layout.buildDirectory.file(GENERATED_SCENARIO_METADATA_FILE))
 }
