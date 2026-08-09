@@ -65,6 +65,7 @@ class ComposeGifRecorderPlugin : Plugin<Project> {
         extension.libraryVersion.convention(DEFAULT_LIBRARY_VERSION)
         extension.gifWidth.convention(540)
         extension.gifHeight.convention(0)
+        extension.canvasBackgroundColor.convention("white")
         extension.maxChangedPixelPercentage.convention(DEFAULT_MAX_CHANGED_PIXEL_PERCENTAGE)
         extension.baselineDir.convention(
             project.rootProject.layout.projectDirectory
