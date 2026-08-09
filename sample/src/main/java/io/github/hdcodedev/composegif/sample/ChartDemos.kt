@@ -58,14 +58,14 @@ fun ChartDemoScreen(modifier: Modifier = Modifier) {
         ) {
             item {
                 Text(
-                    text = "Charts Playground",
+                    text = "HDCharts Playground",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                 )
             }
             item {
                 Text(
-                    text = "Chart demos powered by dautovicharis/charts.",
+                    text = "Chart demos powered by HDCharts.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

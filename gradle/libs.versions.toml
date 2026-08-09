@@ -2,7 +2,7 @@
 # AGP 9.3.1 requires Gradle 9.5 and runs on JDK 17.
 agp = "9.3.1"
 
-# Charts 2.4.0 and AndroidX Core 1.19.0 require compile SDK 37.1.
+# HDCharts 2.4.0 and AndroidX Core 1.19.0 require compile SDK 37.1.
 androidCompileSdk = "37"
 androidCompileSdkMinor = "1"
 androidMinSdk = "24"
