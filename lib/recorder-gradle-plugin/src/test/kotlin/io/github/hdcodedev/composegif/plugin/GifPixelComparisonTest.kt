@@ -2,17 +2,41 @@ package io.github.hdcodedev.composegif.plugin
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.InputStream
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class GifPixelComparisonTest {
+    @Test
+    fun rawVideoCommand_usesGifFrameTimestampsWithoutDuplication() {
+        assertEquals(
+            listOf(
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-i",
+                "/tmp/input.gif",
+                "-fps_mode",
+                "passthrough",
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "rgba",
+                "-",
+            ),
+            rawVideoCommand("ffmpeg", File("/tmp/input.gif")),
+        )
+    }
+
     @Test
     fun cleanup_finishesAllProcesses_whenOneProcessFails() {
         val failedProcess = RecordingProcess(exitCode = 1)

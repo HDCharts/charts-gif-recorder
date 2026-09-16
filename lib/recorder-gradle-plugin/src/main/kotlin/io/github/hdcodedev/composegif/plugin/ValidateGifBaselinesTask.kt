@@ -209,20 +209,7 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
         )
 
     private fun startRawVideo(file: File): RawVideoProcess {
-        val command =
-            listOf(
-                ffmpegBin.get(),
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                "-i",
-                file.absolutePath,
-                "-f",
-                "rawvideo",
-                "-pix_fmt",
-                "rgba",
-                "-",
-            )
+        val command = rawVideoCommand(ffmpegBin.get(), file)
         val process =
             try {
                 ProcessBuilder(command).directory(project.projectDir).start()
@@ -272,6 +259,26 @@ internal data class RawVideoProcess(
     val errorOutput: AtomicReference<String>,
     val errorThread: Thread,
 )
+
+internal fun rawVideoCommand(
+    ffmpegBin: String,
+    file: File,
+): List<String> =
+    listOf(
+        ffmpegBin,
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        file.absolutePath,
+        "-fps_mode",
+        "passthrough",
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "rgba",
+        "-",
+    )
 
 internal fun cleanupRawVideos(rawVideos: List<RawVideoProcess>) {
     var cleanupFailure: Throwable? = null
