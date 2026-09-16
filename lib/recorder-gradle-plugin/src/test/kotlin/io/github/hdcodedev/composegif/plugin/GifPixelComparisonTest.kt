@@ -1,11 +1,93 @@
 package io.github.hdcodedev.composegif.plugin
 
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class GifPixelComparisonTest {
+    @Test
+    fun cleanup_finishesAllProcesses_whenOneProcessFails() {
+        val failedProcess = RecordingProcess(exitCode = 1)
+        val healthyProcess = RecordingProcess(exitCode = 0)
+        val rawVideos =
+            listOf(
+                rawVideo(failedProcess),
+                rawVideo(healthyProcess),
+            )
+
+        val error =
+            assertFailsWith<IllegalStateException> {
+                cleanupRawVideos(rawVideos)
+            }
+
+        assertContains(error.message.orEmpty(), "Command failed while decoding GIF")
+        assertTrue(failedProcess.waited)
+        assertTrue(healthyProcess.waited)
+        assertTrue(failedProcess.inputClosed)
+        assertTrue(healthyProcess.inputClosed)
+    }
+
+    @Test
+    fun identicalPixelStreams_passWithoutRetainingWholeInput() {
+        val pixels = ByteArray(2 * 2 * 4)
+
+        assertNull(
+            compareDecodedPixelStreams(
+                expected = ByteArrayInputStream(pixels),
+                received = ByteArrayInputStream(pixels.copyOf()),
+                width = 2,
+                height = 2,
+                frameCount = 1,
+                maxChangedPixelPercentage = 0.0,
+            ),
+        )
+    }
+
+    @Test
+    fun pixelStreams_compareFrameByFrame() {
+        val expected = ByteArray(2 * 2 * 4)
+        val received = expected.copyOf().also { it[4] = 10 }
+
+        val message =
+            compareDecodedPixelStreams(
+                expected = ByteArrayInputStream(expected),
+                received = ByteArrayInputStream(received),
+                width = 2,
+                height = 2,
+                frameCount = 1,
+                maxChangedPixelPercentage = 0.0,
+            )
+
+        assertNotNull(message)
+        assertContains(message, "1/4 pixels")
+    }
+
+    @Test
+    fun truncatedPixelStream_isRejected() {
+        val frame = ByteArray(2 * 2 * 4)
+
+        val message =
+            compareDecodedPixelStreams(
+                expected = ByteArrayInputStream(frame),
+                received = ByteArrayInputStream(frame.copyOf(frame.size - 1)),
+                width = 2,
+                height = 2,
+                frameCount = 1,
+                maxChangedPixelPercentage = 0.0,
+            )
+
+        assertNotNull(message)
+        assertContains(message, "ended before frame 0")
+    }
+
     @Test
     fun identicalPixels_pass() {
         val pixels = ByteArray(2 * 2 * 4)
@@ -104,5 +186,42 @@ class GifPixelComparisonTest {
                 maxChangedPixelPercentage = 0.0,
             ),
         )
+    }
+
+    private fun rawVideo(process: RecordingProcess): RawVideoProcess =
+        RawVideoProcess(
+            process = process,
+            errorOutput = AtomicReference("ffmpeg failed"),
+            errorThread = thread(isDaemon = true) {},
+        )
+
+    private class RecordingProcess(
+        private val exitCode: Int,
+    ) : Process() {
+        var waited = false
+        var inputClosed = false
+
+        private val input =
+            object : ByteArrayInputStream(ByteArray(0)) {
+                override fun close() {
+                    inputClosed = true
+                    super.close()
+                }
+            }
+
+        override fun getOutputStream() = ByteArrayOutputStream()
+
+        override fun getInputStream(): InputStream = input
+
+        override fun getErrorStream(): InputStream = ByteArrayInputStream(ByteArray(0))
+
+        override fun waitFor(): Int {
+            waited = true
+            return exitCode
+        }
+
+        override fun exitValue(): Int = exitCode
+
+        override fun destroy() = Unit
     }
 }

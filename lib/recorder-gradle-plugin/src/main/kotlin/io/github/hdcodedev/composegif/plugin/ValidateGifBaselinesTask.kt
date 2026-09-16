@@ -12,6 +12,9 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 
 internal abstract class ValidateGifBaselinesTask : DefaultTask() {
     init {
@@ -115,18 +118,52 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
         if (expected.timestamps != received.timestamps) {
             return "frame timing differs"
         }
-        if (expected.pixels.size != received.pixels.size) {
-            return "decoded pixel buffer size differs: expected ${expected.pixels.size}, " +
-                "received ${received.pixels.size}"
-        }
-        return compareDecodedPixels(
-            expected = expected.pixels,
-            received = received.pixels,
+        return compareGifPixelStreams(
+            expected = expected,
+            received = received,
             width = expected.width,
             height = expected.height,
             frameCount = expected.frameCount,
             maxChangedPixelPercentage = maxChangedPixelPercentage,
         )
+    }
+
+    private fun compareGifPixelStreams(
+        expected: DecodedGif,
+        received: DecodedGif,
+        width: Int,
+        height: Int,
+        frameCount: Int,
+        maxChangedPixelPercentage: Double,
+    ): String? {
+        val processes = mutableListOf<RawVideoProcess>()
+        var comparisonFailure: Throwable? = null
+        return try {
+            processes += startRawVideo(expected.file)
+            processes += startRawVideo(received.file)
+            val expectedProcess = processes[0]
+            val receivedProcess = processes[1]
+            compareDecodedPixelStreams(
+                expected = expectedProcess.process.inputStream,
+                received = receivedProcess.process.inputStream,
+                width = width,
+                height = height,
+                frameCount = frameCount,
+                maxChangedPixelPercentage = maxChangedPixelPercentage,
+            )
+        } catch (error: Throwable) {
+            comparisonFailure = error
+            throw error
+        } finally {
+            try {
+                cleanupRawVideos(processes)
+            } catch (cleanupFailure: Throwable) {
+                if (comparisonFailure == null) {
+                    throw cleanupFailure
+                }
+                comparisonFailure.addSuppressed(cleanupFailure)
+            }
+        }
     }
 
     private fun decodeGif(file: File): DecodedGif {
@@ -154,22 +191,7 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
             height = metadata[1].toInt(),
             frameCount = metadata[2].toInt(),
             timestamps = timestamps,
-            pixels =
-                runBinaryChecked(
-                    listOf(
-                        ffmpegBin.get(),
-                        "-hide_banner",
-                        "-loglevel",
-                        "error",
-                        "-i",
-                        file.absolutePath,
-                        "-f",
-                        "rawvideo",
-                        "-pix_fmt",
-                        "rgba",
-                        "-",
-                    ),
-                ),
+            file = file,
         )
     }
 
@@ -186,7 +208,21 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
             },
         )
 
-    private fun runBinaryChecked(command: List<String>): ByteArray {
+    private fun startRawVideo(file: File): RawVideoProcess {
+        val command =
+            listOf(
+                ffmpegBin.get(),
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-i",
+                file.absolutePath,
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "rgba",
+                "-",
+            )
         val process =
             try {
                 ProcessBuilder(command).directory(project.projectDir).start()
@@ -196,13 +232,12 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
                     error,
                 )
             }
-        val output = process.inputStream.readBytes()
-        val errorOutput = process.errorStream.bufferedReader().readText()
-        val exit = process.waitFor()
-        if (exit != 0) {
-            throw IllegalStateException("Command failed (${command.joinToString(" ")}):\n$errorOutput")
-        }
-        return output
+        val errorOutput = AtomicReference("")
+        val errorThread =
+            thread(isDaemon = true, name = "compose-gif-ffmpeg-stderr") {
+                errorOutput.set(process.errorStream.bufferedReader().readText())
+            }
+        return RawVideoProcess(process, errorOutput, errorThread)
     }
 
     private fun runChecked(command: List<String>): String {
@@ -228,11 +263,129 @@ internal abstract class ValidateGifBaselinesTask : DefaultTask() {
         val height: Int,
         val frameCount: Int,
         val timestamps: List<String>,
-        val pixels: ByteArray,
+        val file: File,
     )
 }
 
+internal data class RawVideoProcess(
+    val process: Process,
+    val errorOutput: AtomicReference<String>,
+    val errorThread: Thread,
+)
+
+internal fun cleanupRawVideos(rawVideos: List<RawVideoProcess>) {
+    var cleanupFailure: Throwable? = null
+
+    rawVideos.forEach { rawVideo ->
+        try {
+            rawVideo.process.inputStream.close()
+        } catch (error: Throwable) {
+            cleanupFailure = cleanupFailure.addCleanupFailure(error)
+        }
+    }
+
+    rawVideos.forEach { rawVideo ->
+        try {
+            finishRawVideo(rawVideo)
+        } catch (error: Throwable) {
+            cleanupFailure = cleanupFailure.addCleanupFailure(error)
+        }
+    }
+
+    cleanupFailure?.let { throw it }
+}
+
+private fun finishRawVideo(rawVideo: RawVideoProcess) {
+    val exit = rawVideo.process.waitFor()
+    rawVideo.errorThread.join()
+    if (exit != 0) {
+        throw IllegalStateException(
+            "Command failed while decoding GIF: ${rawVideo.errorOutput.get()}".trimEnd(),
+        )
+    }
+}
+
+private fun Throwable?.addCleanupFailure(error: Throwable): Throwable {
+    if (this == null) return error
+    addSuppressed(error)
+    return this
+}
+
 internal const val DEFAULT_MAX_CHANGED_PIXEL_PERCENTAGE = 1.0
+
+/**
+ * Compares two raw RGBA frame streams without retaining the complete GIFs in
+ * memory. Only one frame from each stream is held at a time.
+ */
+internal fun compareDecodedPixelStreams(
+    expected: InputStream,
+    received: InputStream,
+    width: Int,
+    height: Int,
+    frameCount: Int,
+    maxChangedPixelPercentage: Double,
+): String? {
+    val pixelsPerFrame = width * height
+    val bytesPerFrame = pixelsPerFrame * 4
+    val expectedFrame = ByteArray(bytesPerFrame)
+    val receivedFrame = ByteArray(bytesPerFrame)
+    var totalChangedPixels = 0
+    var maxChangedPixels = 0
+    var maxChangedFrame = 0
+
+    repeat(frameCount) { frame ->
+        if (!readFully(expected, expectedFrame) || !readFully(received, receivedFrame)) {
+            return "decoded pixel stream ended before frame $frame"
+        }
+
+        var changedPixels = 0
+        for (pixel in 0 until pixelsPerFrame) {
+            val pixelStart = pixel * 4
+            var differs = false
+            repeat(4) { channel ->
+                if (expectedFrame[pixelStart + channel] != receivedFrame[pixelStart + channel]) {
+                    differs = true
+                }
+            }
+            if (differs) changedPixels++
+        }
+
+        totalChangedPixels += changedPixels
+        if (changedPixels > maxChangedPixels) {
+            maxChangedPixels = changedPixels
+            maxChangedFrame = frame
+        }
+    }
+
+    if (expected.read() != -1 || received.read() != -1) {
+        return "decoded pixel stream contains more frames than metadata reports"
+    }
+
+    val changedPixelPercentage = maxChangedPixels * 100.0 / pixelsPerFrame
+    if (changedPixelPercentage <= maxChangedPixelPercentage) return null
+
+    val totalPixels = pixelsPerFrame * frameCount
+    val totalChangedPercentage = totalChangedPixels * 100.0 / totalPixels
+    return "pixel content differs: " +
+        "$maxChangedPixels/$pixelsPerFrame pixels (${formatPercentage(changedPixelPercentage)}%) " +
+        "in frame $maxChangedFrame; " +
+        "$totalChangedPixels/$totalPixels pixels (${formatPercentage(totalChangedPercentage)}%) " +
+        "across GIF (allowed ${formatPercentage(maxChangedPixelPercentage)}% per frame)"
+}
+
+private fun readFully(
+    input: InputStream,
+    buffer: ByteArray,
+): Boolean {
+    var offset = 0
+    while (offset < buffer.size) {
+        val read = input.read(buffer, offset, buffer.size - offset)
+        if (read < 0) return false
+        if (read == 0) continue
+        offset += read
+    }
+    return true
+}
 
 internal fun compareDecodedPixels(
     expected: ByteArray,
