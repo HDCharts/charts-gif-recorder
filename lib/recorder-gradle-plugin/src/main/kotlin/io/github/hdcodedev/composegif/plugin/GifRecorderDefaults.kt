@@ -16,3 +16,7 @@ internal val DEFAULT_LIBRARY_VERSION: String by lazy {
 }
 
 internal const val DEFAULT_REMOTE_SUBDIR = "gif-recorder"
+
+internal const val DEFAULT_GIF_DITHER = "bayer:bayer_scale=3"
+internal const val DEFAULT_GIFSICLE_LOSSY = 0
+internal const val DEFAULT_GIFSICLE_COLORS = 256

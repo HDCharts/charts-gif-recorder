@@ -107,6 +107,13 @@ gifRecorder {
     canvasBackgroundColor.set("0xFCFCFD")
     // Optional. Defaults to 1.0%, allowing 1 changed pixel in a 100-pixel frame.
     maxChangedPixelPercentage.set(1.0)
+    // Optional. Defaults to "bayer:bayer_scale=3" (ffmpeg paletteuse dither mode). "none" compresses
+    // better for busy/moving content, since ordered dithering defeats GIF's run-length coding.
+    gifDither.set("none")
+    // Optional. Defaults to 0 (lossless). gifsicle --lossy value; higher trades exactness for size.
+    gifsicleLossy.set(50)
+    // Optional. Defaults to 256 (the GIF format maximum). gifsicle --colors value.
+    gifsicleColors.set(256)
 }
 ```
 

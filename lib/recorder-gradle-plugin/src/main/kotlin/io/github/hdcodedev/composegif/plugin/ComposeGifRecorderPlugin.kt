@@ -67,6 +67,9 @@ class ComposeGifRecorderPlugin : Plugin<Project> {
         extension.gifHeight.convention(0)
         extension.canvasBackgroundColor.convention("white")
         extension.maxChangedPixelPercentage.convention(DEFAULT_MAX_CHANGED_PIXEL_PERCENTAGE)
+        extension.gifDither.convention(DEFAULT_GIF_DITHER)
+        extension.gifsicleLossy.convention(DEFAULT_GIFSICLE_LOSSY)
+        extension.gifsicleColors.convention(DEFAULT_GIFSICLE_COLORS)
         extension.baselineDir.convention(
             project.rootProject.layout.projectDirectory
                 .dir("gif-baselines"),
