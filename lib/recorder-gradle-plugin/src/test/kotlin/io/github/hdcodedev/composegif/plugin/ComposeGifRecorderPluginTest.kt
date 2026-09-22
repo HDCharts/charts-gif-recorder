@@ -19,9 +19,18 @@ class ComposeGifRecorderPluginTest {
         val extension = project.extensions.getByType(GifRecorderExtension::class.java)
         assertEquals(DEFAULT_MAX_CHANGED_PIXEL_PERCENTAGE, extension.maxChangedPixelPercentage.get())
         assertEquals("white", extension.canvasBackgroundColor.get())
+        assertEquals(DEFAULT_GIF_DITHER, extension.gifDither.get())
+        assertEquals(DEFAULT_GIFSICLE_LOSSY, extension.gifsicleLossy.get())
+        assertEquals(DEFAULT_GIFSICLE_COLORS, extension.gifsicleColors.get())
 
         extension.canvasBackgroundColor.set("0xFCFCFD")
+        extension.gifDither.set("none")
+        extension.gifsicleLossy.set(50)
+        extension.gifsicleColors.set(128)
         val recordTask = project.tasks.getByName("recordGifsDebug") as RecordGifTask
         assertEquals("0xFCFCFD", recordTask.canvasBackgroundColor.get())
+        assertEquals("none", recordTask.gifDither.get())
+        assertEquals(50, recordTask.gifsicleLossy.get())
+        assertEquals(128, recordTask.gifsicleColors.get())
     }
 }

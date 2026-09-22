@@ -60,6 +60,15 @@ internal abstract class RecordGifTask : DefaultTask() {
     public abstract val canvasBackgroundColor: Property<String>
 
     @get:Input
+    public abstract val gifDither: Property<String>
+
+    @get:Input
+    public abstract val gifsicleLossy: Property<Int>
+
+    @get:Input
+    public abstract val gifsicleColors: Property<Int>
+
+    @get:Input
     public abstract val allScenarios: Property<Boolean>
 
     @get:InputFile
@@ -255,7 +264,7 @@ internal abstract class RecordGifTask : DefaultTask() {
                 "-i",
                 palette.absolutePath,
                 "-lavfi",
-                "paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle",
+                "paletteuse=dither=${gifDither.get()}:diff_mode=rectangle",
                 baseGif.absolutePath,
             ),
         )
@@ -270,9 +279,9 @@ internal abstract class RecordGifTask : DefaultTask() {
                 gifsicleBin.get(),
                 "--no-warnings",
                 "--optimize=3",
-                "--lossy=0",
+                "--lossy=${gifsicleLossy.get()}",
                 "--colors",
-                "256",
+                gifsicleColors.get().toString(),
                 baseGif.absolutePath,
                 "-o",
                 finalGif.absolutePath,
@@ -444,5 +453,8 @@ internal fun RecordGifTask.configureFromExtension(
     gifWidth.convention(extension.gifWidth)
     gifHeight.convention(extension.gifHeight)
     canvasBackgroundColor.convention(extension.canvasBackgroundColor)
+    gifDither.convention(extension.gifDither)
+    gifsicleLossy.convention(extension.gifsicleLossy)
+    gifsicleColors.convention(extension.gifsicleColors)
     scenarioMetadataFile.convention(project.layout.buildDirectory.file(GENERATED_SCENARIO_METADATA_FILE))
 }
