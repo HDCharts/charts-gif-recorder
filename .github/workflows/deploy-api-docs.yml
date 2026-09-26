@@ -23,7 +23,7 @@ permissions:
 jobs:
   build:
     name: Build Dokka Docs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     concurrency:
       group: pages-build
       cancel-in-progress: true
@@ -112,7 +112,7 @@ jobs:
   deploy:
     name: Deploy to GitHub Pages
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     concurrency:
       group: pages-deploy
       cancel-in-progress: false

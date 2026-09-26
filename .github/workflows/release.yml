@@ -18,7 +18,7 @@ concurrency:
 jobs:
   release:
     name: Publish Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       published: ${{ steps.secrets_check.outputs.can_publish }}
       release_version: ${{ steps.version.outputs.release_version }}
@@ -150,7 +150,7 @@ jobs:
     name: Create GitHub Release
     needs: [release, deploy-api-docs]
     if: ${{ needs.release.outputs.published == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:
