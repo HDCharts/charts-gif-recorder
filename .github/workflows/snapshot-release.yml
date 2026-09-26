@@ -21,7 +21,7 @@ concurrency:
 jobs:
   changes:
     name: Check for Changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       has_changes: ${{ steps.changes.outputs.has_changes }}
     steps:
@@ -60,7 +60,7 @@ jobs:
 
   snapshot-release:
     name: Publish Snapshot Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: changes
     if: ${{ needs.changes.outputs.has_changes == 'true' }}
     outputs:

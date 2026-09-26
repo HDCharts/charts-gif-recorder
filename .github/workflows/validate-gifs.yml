@@ -23,7 +23,8 @@ jobs:
   validate:
     name: Validate GIF baselines
     if: ${{ inputs.should-run }}
-    runs-on: ubuntu-latest
+    # Pinned: GIF baselines depend on the ffmpeg and gifsicle versions from this image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       FFMPEG_VERSION: 6.1.1
