@@ -1,6 +1,6 @@
 [versions]
 # AGP 9.3.1 requires Gradle 9.5 and runs on JDK 17.
-agp = "9.4.1"
+agp = "9.5.0"
 
 # HDCharts 2.4.0 and AndroidX Core 1.19.0 require compile SDK 37.1.
 androidCompileSdk = "37"
@@ -11,13 +11,13 @@ java = "17"
 
 junit = "4.13.2"
 activityCompose = "1.13.0"
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 ksp = "2.3.12"
 # Keep the explicit Compose version aligned with the BOM below. The published
 # library modules cannot rely on the app's BOM to provide their metadata.
 composeBom = "2026.09.00"
 composeUi = "1.11.4"
-charts = "2.4.0"
+charts = "3.0.0"
 ktlint = "14.2.0"
 vanniktechPublish = "0.37.0"
 androidxTest = "1.7.0"
